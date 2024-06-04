@@ -5,8 +5,9 @@ const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
 const User = require('./models/user'); // Импорт модели пользователя
+
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3001; // Убедитесь, что порт установлен правильно
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
@@ -14,7 +15,10 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.json());
 
-mongoose.connect(process.env.MONGODB_URL, {})
+mongoose.connect(process.env.MONGODB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
 .then(() => console.log('Connected to MongoDB'))
 .catch((error) => console.log(error));
 
@@ -41,7 +45,7 @@ bot.on('message', async (msg) => {
     }
 });
 
-app.get('/username/:userId', async (req, res) => {
+app.get('/username', async (req, res) => {
     const userId = req.query.userId;
     try {
         const user = await User.findById(userId);
