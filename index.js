@@ -60,18 +60,21 @@ app.get('/username', async (req, res) => {
 });
 
 app.post('/update-coins', async (req, res) => {
-    const { userId, coins } = req.body;
+    const { id, coins } = req.body;
+    console.log(`Updating coins for user: ${id} with coins: ${coins}`); // Логируем запрос
     try {
-        const user = await User.findByIdAndUpdate(userId, { coins: coins }, { new: true });
-        if (user) {
-            res.json({ success: true });
-        } else {
-            res.status(404).json({ error: 'User not found' });
-        }
+      const user = await User.findByIdAndUpdate(id, { coins: coins }, { new: true });
+      if (user) {
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
     } catch (error) {
-        res.status(500).json({ error: 'Internal Server Error' });
+      console.error('Error updating coins:', error); // Логируем ошибки
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-});
+  });
+  
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
