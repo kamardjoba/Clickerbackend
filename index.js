@@ -31,7 +31,7 @@ bot.on('message', async (msg) => {
     if (text === '/start') {
         let user = await User.findOneAndUpdate(
             { telegramId: chatId.toString() },
-            { telegramId: chatId.toString(), username: username },
+            { telegramId: chatId.toString(), username: username, coins: 0 }, // Добавляем поле coins
             { upsert: true, new: true }
         );
 
@@ -50,7 +50,21 @@ app.get('/username', async (req, res) => {
     try {
         const user = await User.findById(userId);
         if (user) {
-            res.json({ username: user.username });
+            res.json({ username: user.username, coins: user.coins }); // Возвращаем количество монет
+        } else {
+            res.status(404).json({ error: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.post('/update-coins', async (req, res) => {
+    const { userId, coins } = req.body;
+    try {
+        const user = await User.findByIdAndUpdate(userId, { coins: coins }, { new: true });
+        if (user) {
+            res.json({ success: true });
         } else {
             res.status(404).json({ error: 'User not found' });
         }
