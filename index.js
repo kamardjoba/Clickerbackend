@@ -33,6 +33,7 @@ const generateReferralCode = () => {
 };
 
 const generateTelegramLink = (referralCode) => {
+  // Ссылка на Telegram бот с параметром реферального кода
   return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
 };
 
