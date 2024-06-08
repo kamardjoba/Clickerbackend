@@ -22,6 +22,8 @@ app.use(bodyParser.json());
 app.use(express.json());
 
 mongoose.connect(process.env.MONGODB_URL, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch((error) => console.log(error));
@@ -71,6 +73,7 @@ app.post('/update-coins', async (req, res) => {
     try {
         const user = await User.findByIdAndUpdate(userId, { coins: coins }, { new: true });
         if (user) {
+            console.log('Coins updated successfully:', user); // Логируем успешное обновление
             res.json({ success: true });
         } else {
             res.status(404).json({ error: 'User not found' });
