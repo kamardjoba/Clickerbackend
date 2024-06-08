@@ -13,11 +13,21 @@ const userSchema = new mongoose.Schema({
     coins: {
         type: Number,
         default: 0
+    },
+    referralCode: {
+        type: String,
+        unique: true
+    },
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    referralCount: { // Добавляем счетчик приглашенных рефералов
+        type: Number,
+        default: 0
     }
 });
 
 const User = mongoose.model('User', userSchema);
-
-
 
 module.exports = User;
