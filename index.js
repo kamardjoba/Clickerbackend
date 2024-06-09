@@ -37,6 +37,42 @@ const generateTelegramLink = (referralCode) => {
   return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
 };
 
+// Импортируйте и настройте остальные зависимости, как указано выше
+const axios = require('axios');
+
+app.post('/check-subscription', async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Здесь мы проверяем, подписан ли пользователь на канал
+    const channelId = '@Clickerroadtomoon'; // Укажите ваше имя канала
+    const response = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
+      params: {
+        chat_id: channelId,
+        user_id: user.telegramId
+      }
+    });
+
+    const isSubscribed = response.data.result.status === 'member' || response.data.result.status === 'administrator' || response.data.result.status === 'creator';
+
+    if (isSubscribed) {
+      user.coins += 50000; // Начисляем монеты
+      await user.save();
+      res.json({ success: true, isSubscribed });
+    } else {
+      res.json({ success: false, isSubscribed });
+    }
+  } catch (error) {
+    console.error('Error checking subscription:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
 // Регистрация с реферальным кодом через Telegram Bot
 app.post('/register-with-referral', async (req, res) => {
   const { telegramId, username, referralCode } = req.body;
