@@ -7,7 +7,7 @@ require('dotenv').config();
 const User = require('./models/user');
 const axios = require('axios');
 
-const BOT_USERNAME = sdfsdfjsidjsjgjsdopgjd_bot
+const BOT_USERNAME = sdfsdfjsidjsjgjsdopgjd_bot;
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
