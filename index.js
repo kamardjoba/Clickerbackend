@@ -7,6 +7,7 @@ require('dotenv').config();
 const User = require('./models/user');
 const axios = require('axios');
 
+const BOT_USERNAME = sdfsdfjsidjsjgjsdopgjd_bot
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
@@ -34,8 +35,9 @@ const generateReferralCode = () => {
 };
 
 const generateTelegramLink = (referralCode) => {
-  return `https://t.me/${process.env.BOT_USERNAME}?startapp=${referralCode}`;
-};
+    return `https://t.me/BOT_USERNAME?start=${referralCode}`;
+  };
+  
 
 const getProfilePhotoUrl = async (telegramId) => {
   try {
