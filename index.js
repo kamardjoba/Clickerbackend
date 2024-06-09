@@ -37,6 +37,96 @@ const generateTelegramLink = (referralCode) => {
   return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
 };
 
+const getProfilePhotoUrl = async (telegramId) => {
+  try {
+    const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
+      params: {
+        user_id: telegramId,
+        limit: 1
+      }
+    });
+
+    if (response.data.ok && response.data.result.photos.length > 0) {
+      const fileId = response.data.result.photos[0][0].file_id;
+      const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
+        params: {
+          file_id: fileId
+        }
+      });
+
+      if (fileResponse.data.ok) {
+        const filePath = fileResponse.data.result.file_path;
+        return `https://api.telegram.org/file/bot${token}/${filePath}`;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching profile photo:', error);
+  }
+  return '';
+};
+
+// Регистрация с реферальным кодом через Telegram Bot
+app.post('/register-with-referral', async (req, res) => {
+  const { telegramId, username, referralCode } = req.body;
+  try {
+    const existingUser = await User.findOne({ telegramId });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    const referredByUser = await User.findOne({ referralCode });
+    if (!referredByUser) {
+      return res.status(400).json({ error: 'Invalid referral code' });
+    }
+
+    const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
+
+    const newUser = new User({
+      telegramId,
+      username,
+      coins: 0,
+      referralCode: generateReferralCode(),
+      referredBy: referredByUser._id,
+      profilePhotoUrl
+    });
+
+    await newUser.save();
+
+    // Начисление бонусов за реферала
+    referredByUser.coins += 5000;
+    await referredByUser.save();
+
+    res.json({ success: true, userId: newUser._id, referralCode: newUser.referralCode });
+  } catch (error) {
+    console.error('Error registering user with referral:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Получение информации о пользователе
+app.get('/username', async (req, res) => {
+  const userId = req.query.userId;
+  try {
+    const user = await User.findById(userId).populate('referredBy');
+    if (user) {
+      const referralCount = await User.countDocuments({ referredBy: user._id });
+      res.json({
+        username: user.username,
+        coins: user.coins,
+        referralCode: user.referralCode,
+        telegramLink: generateTelegramLink(user.referralCode),
+        referralCount,
+        profilePhotoUrl: user.profilePhotoUrl // Возвращаем URL фото профиля
+      });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Проверка подписки пользователя
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
   try {
@@ -53,14 +143,17 @@ app.post('/check-subscription', async (req, res) => {
       }
     });
 
-    const isSubscribed = ['member', 'administrator', 'creator'].includes(response.data.result.status);
-
-    if (isSubscribed) {
-      user.coins += 50000; // Начисляем монеты
-      await user.save();
-      res.json({ success: true, isSubscribed });
+    if (response.data.ok) {
+      const isSubscribed = ['member', 'administrator', 'creator'].includes(response.data.result.status);
+      if (isSubscribed) {
+        user.coins += 50000; // Начисляем монеты
+        await user.save();
+        res.json({ success: true, isSubscribed });
+      } else {
+        res.json({ success: false, isSubscribed });
+      }
     } else {
-      res.json({ success: false, isSubscribed });
+      res.status(400).json({ error: response.data.description });
     }
   } catch (error) {
     console.error('Error checking subscription:', error);
@@ -68,71 +161,12 @@ app.post('/check-subscription', async (req, res) => {
   }
 });
 
-// Регистрация с реферальным кодом через Telegram Bot
-app.post('/register-with-referral', async (req, res) => {
-  const { telegramId, username, referralCode } = req.body;
-  try {
-    const existingUser = await User.findOne({ telegramId });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
-
-    const referredByUser = await User.findOne({ referralCode });
-    if (!referredByUser) {
-      return res.status(400).json({ error: 'Invalid referral code' });
-    }
-
-    const newUser = new User({
-      telegramId,
-      username,
-      coins: 0,
-      referralCode: generateReferralCode(),
-      referredBy: referredByUser._id
-    });
-
-    await newUser.save();
-
-    // Начисление бонусов за реферала
-    referredByUser.coins += 5000; // Бонус за приглашение
-    await referredByUser.save();
-
-    res.json({ success: true, userId: newUser._id, referralCode: newUser.referralCode });
-  } catch (error) {
-    console.error('Error registering user with referral:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-// Получение информации о пользователе
-app.get('/username', async (req, res) => {
-  const userId = req.query.userId;
-  try {
-    const user = await User.findById(userId).populate('referredBy');
-    if (user) {
-      const referralCount = await User.countDocuments({ referredBy: user._id }); // Подсчет рефералов
-      res.json({
-        username: user.username,
-        coins: user.coins,
-        referralCode: user.referralCode,
-        telegramLink: generateTelegramLink(user.referralCode),
-        referralCount // Количество рефералов
-      });
-    } else {
-      res.status(404).json({ error: 'User not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
 // Обновление количества монет
 app.post('/update-coins', async (req, res) => {
   const { userId, coins } = req.body;
-  console.log(`Received request to update coins: ${coins} for userId: ${userId}`);
   try {
     const user = await User.findByIdAndUpdate(userId, { coins }, { new: true });
     if (user) {
-      console.log(`Coins updated successfully: ${user.coins}`);
       res.json({ success: true });
     } else {
       res.status(404).json({ error: 'User not found' });
@@ -143,49 +177,36 @@ app.post('/update-coins', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
 // Настройка Telegram Bot
 if (bot) {
   bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
-    const text = msg.text;
     const username = msg.from.username;
 
-    if (text.startsWith('/start')) {
-      const referralCode = text.split(' ')[1]; // Получаем реферальный код из команды /start <referralCode>
-      let referredByUser = null;
+    let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-      if (referralCode) {
-        referredByUser = await User.findOne({ referralCode });
+    let user = await User.findOneAndUpdate(
+      { telegramId: chatId.toString() },
+      {
+        telegramId: chatId.toString(),
+        username: username,
+        coins: 0,
+        referralCode: generateReferralCode(),
+        profilePhotoUrl
+      },
+      { upsert: true, new: true }
+    );
+
+    await bot.sendMessage(chatId, 'Добро пожаловать! Нажмите на кнопку, чтобы начать игру.', {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+        ]
       }
-
-      let user = await User.findOneAndUpdate(
-        { telegramId: chatId.toString() },
-        {
-          telegramId: chatId.toString(),
-          username: username,
-          coins: 0,
-          referralCode: generateReferralCode(),
-          referredBy: referredByUser ? referredByUser._id : null
-        },
-        { upsert: true, new: true }
-      );
-
-      if (referredByUser && user.isNew) {
-        referredByUser.coins += 5000; // Начисление бонусов за приглашение нового пользователя
-        await referredByUser.save();
-      }
-
-      await bot.sendMessage(chatId, 'Добро пожаловать! Нажмите на кнопку, чтобы начать игру.', {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-          ]
-        }
-      });
-    }
+    });
   });
 }
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});

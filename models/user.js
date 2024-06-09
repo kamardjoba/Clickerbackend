@@ -22,6 +22,10 @@ const userSchema = new mongoose.Schema({
   referredBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  profilePhotoUrl: {
+    type: String,
+    default: ''
   }
 });
 
