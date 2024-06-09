@@ -39,7 +39,7 @@ const generateTelegramLink = (referralCode) => {
 };
 
 // Импортируйте и настройте остальные зависимости, как указано выше
-const axios = require('axios');
+
 
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
