@@ -7,7 +7,7 @@ require('dotenv').config();
 const User = require('./models/user');
 const axios = require('axios');
 
-const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
+const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot"; // Замените на имя вашего бота
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
@@ -35,9 +35,8 @@ const generateReferralCode = () => {
 };
 
 const generateTelegramLink = (referralCode) => {
-    return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
-  };
-  
+  return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
+};
 
 const getProfilePhotoUrl = async (telegramId) => {
   try {
@@ -86,7 +85,7 @@ app.post('/register-with-referral', async (req, res) => {
     const newUser = new User({
       telegramId,
       username,
-      coins: 0,
+      coins: 5000, // Начальные монеты для нового пользователя
       referralCode: generateReferralCode(),
       referredBy: referredByUser._id,
       profilePhotoUrl
@@ -95,7 +94,7 @@ app.post('/register-with-referral', async (req, res) => {
     await newUser.save();
 
     // Начисление бонусов за реферала
-    referredByUser.coins += 5000;
+    referredByUser.coins += 5000; // Бонус для реферера
     await referredByUser.save();
 
     res.json({ success: true, userId: newUser._id, referralCode: newUser.referralCode });
