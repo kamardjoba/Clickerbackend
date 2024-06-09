@@ -38,9 +38,6 @@ const generateTelegramLink = (referralCode) => {
   return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
 };
 
-// Импортируйте и настройте остальные зависимости, как указано выше
-
-
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
   try {
@@ -58,7 +55,7 @@ app.post('/check-subscription', async (req, res) => {
       }
     });
 
-    const isSubscribed = response.data.result.status === 'member' || response.data.result.status === 'administrator' || response.data.result.status === 'creator';
+    const isSubscribed = ['member', 'administrator', 'creator'].includes(response.data.result.status);
 
     if (isSubscribed) {
       user.coins += 50000; // Начисляем монеты
@@ -72,7 +69,6 @@ app.post('/check-subscription', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
 
 // Регистрация с реферальным кодом через Telegram Bot
 app.post('/register-with-referral', async (req, res) => {
