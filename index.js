@@ -34,7 +34,7 @@ const generateReferralCode = () => {
 };
 
 const generateTelegramLink = (referralCode) => {
-  return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
+  return `https://t.me/${process.env.BOT_USERNAME}?startapp=${referralCode}`;
 };
 
 const getProfilePhotoUrl = async (telegramId) => {
