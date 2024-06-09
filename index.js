@@ -35,7 +35,7 @@ const generateReferralCode = () => {
 };
 
 const generateTelegramLink = (referralCode) => {
-    return `https://t.me/BOT_USERNAME?start=${referralCode}`;
+    return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
   };
   
 
