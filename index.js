@@ -4,7 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
-const User = require('./models/user'); // Импорт модели пользователя
+const User = require('./models/user');
 const axios = require('axios');
 
 const app = express();
@@ -30,11 +30,10 @@ mongoose.connect(process.env.MONGODB_URL, {
   .catch((error) => console.log(error));
 
 const generateReferralCode = () => {
-  return Math.random().toString(36).substr(2, 9); // Генерация случайного кода
+  return Math.random().toString(36).substr(2, 9);
 };
 
 const generateTelegramLink = (referralCode) => {
-  // Ссылка на Telegram бот с параметром реферального кода
   return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
 };
 
@@ -46,8 +45,7 @@ app.post('/check-subscription', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Здесь мы проверяем, подписан ли пользователь на канал
-    const channelId = '@Clickerroadtomoon'; // Укажите ваше имя канала
+    const channelId = '@Clickerroadtomoon';
     const response = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
       params: {
         chat_id: channelId,
