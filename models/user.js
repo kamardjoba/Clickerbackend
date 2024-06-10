@@ -1,3 +1,4 @@
+// user.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -26,6 +27,18 @@ const userSchema = new mongoose.Schema({
   profilePhotoUrl: {
     type: String,
     default: ''
+  },
+  // Поле для хранения прогресса игры
+  gameProgress: {
+    type: Object,
+    default: {
+      upgrades: {
+        coinPerClick: { level: 1, cost: 10 },
+        energy: { level: 1, cost: 100, limit: 1000 },
+        energyTime: { level: 1, cost: 200, time: 2000, val: 0.5 }
+      },
+      miniGameState: {}
+    }
   }
 });
 

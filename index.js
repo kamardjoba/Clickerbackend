@@ -1,3 +1,4 @@
+// index.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -7,7 +8,7 @@ require('dotenv').config();
 const User = require('./models/user');
 const axios = require('axios');
 
-BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
+const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
@@ -66,16 +67,13 @@ const getProfilePhotoUrl = async (telegramId) => {
   return '';
 };
 
-// Регистрация с проверкой существующего пользователя
 app.post('/register', async (req, res) => {
   const { telegramId, username, referralCode } = req.body;
 
   try {
-    // Проверка, существует ли пользователь
     let user = await User.findOne({ telegramId });
 
     if (user) {
-      // Если пользователь существует, возвращаем его данные
       return res.json({
         success: true,
         userId: user._id,
@@ -83,29 +81,35 @@ app.post('/register', async (req, res) => {
         coins: user.coins,
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
-        profilePhotoUrl: user.profilePhotoUrl
+        profilePhotoUrl: user.profilePhotoUrl,
+        gameProgress: user.gameProgress
       });
     }
 
-    // Если пользователь не существует, создаем нового
     const referredByUser = referralCode ? await User.findOne({ referralCode }) : null;
-
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
 
     user = new User({
       telegramId,
       username,
-      coins: 5000, // Начальные монеты для нового пользователя
+      coins: 5000,
       referralCode: generateReferralCode(),
       referredBy: referredByUser ? referredByUser._id : null,
-      profilePhotoUrl
+      profilePhotoUrl,
+      gameProgress: {
+        upgrades: {
+          coinPerClick: { level: 1, cost: 10 },
+          energy: { level: 1, cost: 100, limit: 1000 },
+          energyTime: { level: 1, cost: 200, time: 2000, val: 0.5 }
+        },
+        miniGameState: {}
+      }
     });
 
     await user.save();
 
-    // Начисление бонусов за реферала
     if (referredByUser) {
-      referredByUser.coins += 5000; // Бонус для реферера
+      referredByUser.coins += 5000;
       await referredByUser.save();
     }
 
@@ -116,7 +120,8 @@ app.post('/register', async (req, res) => {
       coins: user.coins,
       referralCode: user.referralCode,
       telegramLink: generateTelegramLink(user.referralCode),
-      profilePhotoUrl: user.profilePhotoUrl
+      profilePhotoUrl: user.profilePhotoUrl,
+      gameProgress: user.gameProgress
     });
   } catch (error) {
     console.error('Error registering user:', error);
@@ -124,7 +129,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// Получение информации о пользователе
 app.get('/username', async (req, res) => {
   const userId = req.query.userId;
   try {
@@ -137,7 +141,8 @@ app.get('/username', async (req, res) => {
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
         referralCount,
-        profilePhotoUrl: user.profilePhotoUrl
+        profilePhotoUrl: user.profilePhotoUrl,
+        gameProgress: user.gameProgress
       });
     } else {
       res.status(404).json({ error: 'User not found' });
@@ -147,7 +152,6 @@ app.get('/username', async (req, res) => {
   }
 });
 
-// Проверка подписки пользователя
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
   try {
@@ -167,7 +171,7 @@ app.post('/check-subscription', async (req, res) => {
     if (response.data.ok) {
       const isSubscribed = ['member', 'administrator', 'creator'].includes(response.data.result.status);
       if (isSubscribed) {
-        user.coins += 50000; // Начисляем монеты
+        user.coins += 50000;
         await user.save();
         res.json({ success: true, isSubscribed });
       } else {
@@ -182,7 +186,6 @@ app.post('/check-subscription', async (req, res) => {
   }
 });
 
-// Обновление количества монет
 app.post('/update-coins', async (req, res) => {
   const { userId, coins } = req.body;
   try {
@@ -194,6 +197,43 @@ app.post('/update-coins', async (req, res) => {
     }
   } catch (error) {
     console.error('Error updating coins:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Сохранение прогресса игры
+app.post('/save-progress', async (req, res) => {
+  const { userId, coins, upgrades, miniGameState } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+    if (user) {
+      user.coins = coins;
+      user.gameProgress = { upgrades, miniGameState };
+      await user.save();
+      res.json({ success: true, gameProgress: user.gameProgress });
+    } else {
+      res.status(404).json({ error: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Error saving progress:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Загрузка прогресса игры
+app.get('/load-progress', async (req, res) => {
+  const userId = req.query.userId;
+
+  try {
+    const user = await User.findById(userId);
+    if (user) {
+      res.json({ success: true, gameProgress: user.gameProgress });
+    } else {
+      res.status(404).json({ error: 'Progress not found' });
+    }
+  } catch (error) {
+    console.error('Error loading progress:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
