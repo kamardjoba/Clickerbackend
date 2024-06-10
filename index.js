@@ -7,7 +7,7 @@ require('dotenv').config();
 const User = require('./models/user');
 const axios = require('axios');
 
-const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot"; // Замените на имя вашего бота
+BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
@@ -66,40 +66,60 @@ const getProfilePhotoUrl = async (telegramId) => {
   return '';
 };
 
-// Регистрация с реферальным кодом через Telegram Bot
-app.post('/register-with-referral', async (req, res) => {
+// Регистрация с проверкой существующего пользователя
+app.post('/register', async (req, res) => {
   const { telegramId, username, referralCode } = req.body;
+
   try {
-    const existingUser = await User.findOne({ telegramId });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
+    // Проверка, существует ли пользователь
+    let user = await User.findOne({ telegramId });
+
+    if (user) {
+      // Если пользователь существует, возвращаем его данные
+      return res.json({
+        success: true,
+        userId: user._id,
+        username: user.username,
+        coins: user.coins,
+        referralCode: user.referralCode,
+        telegramLink: generateTelegramLink(user.referralCode),
+        profilePhotoUrl: user.profilePhotoUrl
+      });
     }
 
-    const referredByUser = await User.findOne({ referralCode });
-    if (!referredByUser) {
-      return res.status(400).json({ error: 'Invalid referral code' });
-    }
+    // Если пользователь не существует, создаем нового
+    const referredByUser = referralCode ? await User.findOne({ referralCode }) : null;
 
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
 
-    const newUser = new User({
+    user = new User({
       telegramId,
       username,
       coins: 5000, // Начальные монеты для нового пользователя
       referralCode: generateReferralCode(),
-      referredBy: referredByUser._id,
+      referredBy: referredByUser ? referredByUser._id : null,
       profilePhotoUrl
     });
 
-    await newUser.save();
+    await user.save();
 
     // Начисление бонусов за реферала
-    referredByUser.coins += 5000; // Бонус для реферера
-    await referredByUser.save();
+    if (referredByUser) {
+      referredByUser.coins += 5000; // Бонус для реферера
+      await referredByUser.save();
+    }
 
-    res.json({ success: true, userId: newUser._id, referralCode: newUser.referralCode });
+    res.json({
+      success: true,
+      userId: user._id,
+      username: user.username,
+      coins: user.coins,
+      referralCode: user.referralCode,
+      telegramLink: generateTelegramLink(user.referralCode),
+      profilePhotoUrl: user.profilePhotoUrl
+    });
   } catch (error) {
-    console.error('Error registering user with referral:', error);
+    console.error('Error registering user:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
@@ -117,7 +137,7 @@ app.get('/username', async (req, res) => {
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
         referralCount,
-        profilePhotoUrl: user.profilePhotoUrl // Возвращаем URL фото профиля
+        profilePhotoUrl: user.profilePhotoUrl
       });
     } else {
       res.status(404).json({ error: 'User not found' });
@@ -191,8 +211,6 @@ if (bot) {
       {
         telegramId: chatId.toString(),
         username: username,
-        coins: 0,
-        referralCode: generateReferralCode(),
         profilePhotoUrl
       },
       { upsert: true, new: true }
