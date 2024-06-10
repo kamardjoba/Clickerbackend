@@ -203,68 +203,68 @@ app.post('/update-coins', async (req, res) => {
 
 // Сохранение прогресса игры
 app.post('/save-progress', async (req, res) => {
-  const { userId, coins, upgrades, miniGameState } = req.body;
-
-  try {
-    const user = await User.findById(userId);
-    if (user) {
-      user.coins = coins;
-      user.gameProgress = { upgrades, miniGameState };
-      await user.save();
-      res.json({ success: true, gameProgress: user.gameProgress });
-    } else {
-      res.status(404).json({ error: 'User not found' });
+    const { userId, coins, upgrades, miniGameState } = req.body;
+  
+    try {
+      const user = await User.findById(userId);
+      if (user) {
+        user.coins = coins;
+        user.gameProgress = { upgrades, miniGameState };
+        await user.save();
+        res.json({ success: true, gameProgress: user.gameProgress });
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-  } catch (error) {
-    console.error('Error saving progress:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  });
 
 // Загрузка прогресса игры
 app.get('/load-progress', async (req, res) => {
-  const userId = req.query.userId;
-
-  try {
-    const user = await User.findById(userId);
-    if (user) {
-      res.json({ success: true, gameProgress: user.gameProgress });
-    } else {
-      res.status(404).json({ error: 'Progress not found' });
+    const userId = req.query.userId;
+  
+    try {
+      const user = await User.findById(userId);
+      if (user) {
+        res.json({ success: true, gameProgress: user.gameProgress });
+      } else {
+        res.status(404).json({ error: 'Progress not found' });
+      }
+    } catch (error) {
+      console.error('Error loading progress:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-  } catch (error) {
-    console.error('Error loading progress:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  });
 
 // Настройка Telegram Bot
 if (bot) {
-  bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-    const username = msg.from.username;
-
-    let profilePhotoUrl = await getProfilePhotoUrl(chatId);
-
-    let user = await User.findOneAndUpdate(
-      { telegramId: chatId.toString() },
-      {
-        telegramId: chatId.toString(),
-        username: username,
-        profilePhotoUrl
-      },
-      { upsert: true, new: true }
-    );
-
-    await bot.sendMessage(chatId, 'Добро пожаловать! Нажмите на кнопку, чтобы начать игру.', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-        ]
-      }
+    bot.on('message', async (msg) => {
+      const chatId = msg.chat.id;
+      const username = msg.from.username;
+  
+      let profilePhotoUrl = await getProfilePhotoUrl(chatId);
+  
+      let user = await User.findOneAndUpdate(
+        { telegramId: chatId.toString() },
+        {
+          telegramId: chatId.toString(),
+          username: username,
+          profilePhotoUrl
+        },
+        { upsert: true, new: true }
+      );
+  
+      await bot.sendMessage(chatId, 'Добро пожаловать! Нажмите на кнопку, чтобы начать игру.', {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+          ]
+        }
+      });
     });
-  });
-}
+  }
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);

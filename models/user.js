@@ -28,7 +28,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  // Поле для хранения прогресса игры
   gameProgress: {
     type: Object,
     default: {
