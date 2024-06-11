@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios'); // Убедитесь, что axios установлен
 require('dotenv').config();
 const UserProgress = require('./models/userProgress'); // Убедитесь, что путь правильный
 
@@ -23,6 +24,38 @@ mongoose.connect(process.env.MONGODB_URL, {
 })
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.log(error));
+
+function generateTelegramLink(referralCode) {
+  return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
+}
+
+async function getProfilePhotoUrl(telegramId) {
+  try {
+    const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
+      params: {
+        user_id: telegramId,
+        limit: 1
+      }
+    });
+
+    if (response.data.ok && response.data.result.photos.length > 0) {
+      const fileId = response.data.result.photos[0][0].file_id;
+      const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
+        params: {
+          file_id: fileId
+        }
+      });
+
+      if (fileResponse.data.ok) {
+        const filePath = fileResponse.data.result.file_path;
+        return `https://api.telegram.org/file/bot${token}/${filePath}`;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching profile photo:', error);
+  }
+  return '';
+}
 
 // Сохранение прогресса игры
 app.post('/save-progress', async (req, res) => {
