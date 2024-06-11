@@ -4,7 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
-const User = require('./user'); // Ensure the path is correct
+const User = require('.//models/user'); // Ensure the path is correct
 const axios = require('axios');
 
 // Additional logging to debug
