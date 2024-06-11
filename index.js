@@ -5,7 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
-const User = require('.models/user'); // Убедитесь, что путь правильный
+const UserProgress = require('./models/userProgress'); // Убедитесь, что путь правильный
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -29,7 +29,7 @@ app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
 
   try {
-    const user = await User.findById(userId);
+    const user = await UserProgress.findById(userId);
     if (user) {
       user.coins = coins;
       user.upgradeCost = upgradeCost;
@@ -58,7 +58,7 @@ app.get('/load-progress', async (req, res) => {
   const userId = req.query.userId;
 
   try {
-    const user = await User.findById(userId);
+    const user = await UserProgress.findById(userId);
     if (user) {
       res.json({
         success: true,
@@ -94,7 +94,7 @@ bot.on('message', async (msg) => {
 
   let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  let user = await User.findOneAndUpdate(
+  let user = await UserProgress.findOneAndUpdate(
     { telegramId: chatId.toString() },
     {
       telegramId: chatId.toString(),

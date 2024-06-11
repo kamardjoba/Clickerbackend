@@ -1,7 +1,7 @@
-// user.js
+// userProgress.js
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
+const userProgressSchema = new mongoose.Schema({
   telegramId: {
     type: String,
     required: true,
@@ -15,20 +15,6 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  referralCode: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  referredBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  profilePhotoUrl: {
-    type: String,
-    default: ''
-  },
-  // Параметры прогресса игры как отдельные поля
   upgradeCost: {
     type: Number,
     default: 10
@@ -68,9 +54,22 @@ const userSchema = new mongoose.Schema({
   time: {
     type: Number,
     default: 2000
+  },
+  referralCode: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  referredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'UserProgress'
+  },
+  profilePhotoUrl: {
+    type: String,
+    default: ''
   }
 });
 
-const User = mongoose.model('User', userSchema);
+const UserProgress = mongoose.model('UserProgress', userProgressSchema);
 
-module.exports = User;
+module.exports = UserProgress;
