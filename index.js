@@ -11,7 +11,7 @@ const UserProgress = require('./models/userProgress'); // Убедитесь, ч
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
-
+const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const bot = new TelegramBot(token, { polling: true });
 
 app.use(cors());
@@ -30,7 +30,7 @@ function generateReferralCode() {
 }
 
 function generateTelegramLink(referralCode) {
-  return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
+  return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
 
 async function getProfilePhotoUrl(telegramId) {
@@ -91,38 +91,40 @@ app.post('/save-progress', async (req, res) => {
 });
 
 // Загрузка прогресса игры
+// Убедитесь, что эти значения возвращаются в ответе на запрос
 app.get('/load-progress', async (req, res) => {
-  const userId = req.query.userId;
-
-  try {
-    const user = await UserProgress.findById(userId);
-    if (user) {
-      res.json({
-        success: true,
-        coins: user.coins,
-        upgradeCost: user.upgradeCost,
-        upgradeLevel: user.upgradeLevel,
-        coinPerClick: user.coinPerClick,
-        upgradeCostEnergy: user.upgradeCostEnergy,
-        upgradeLevelEnergy: user.upgradeLevelEnergy,
-        clickLimit: user.clickLimit,
-        energyNow: user.energyNow,
-        upgradeCostEnergyTime: user.upgradeCostEnergyTime,
-        valEnergyTime: user.valEnergyTime,
-        time: user.time,
-        username: user.username,
-        profilePhotoUrl: user.profilePhotoUrl,
-        referralCode: user.referralCode,
-        telegramLink: generateTelegramLink(user.referralCode)
-      });
-    } else {
-      res.status(404).json({ error: 'Progress not found' });
+    const userId = req.query.userId;
+  
+    try {
+      const user = await UserProgress.findById(userId);
+      if (user) {
+        res.json({
+          success: true,
+          coins: user.coins,
+          upgradeCost: user.upgradeCost,
+          upgradeLevel: user.upgradeLevel,
+          coinPerClick: user.coinPerClick,
+          upgradeCostEnergy: user.upgradeCostEnergy,
+          upgradeLevelEnergy: user.upgradeLevelEnergy,
+          clickLimit: user.clickLimit,
+          energyNow: user.energyNow,
+          upgradeCostEnergyTime: user.upgradeCostEnergyTime,
+          valEnergyTime: user.valEnergyTime,
+          time: user.time,
+          username: user.username,
+          profilePhotoUrl: user.profilePhotoUrl,
+          referralCode: user.referralCode, // Добавьте это
+          telegramLink: generateTelegramLink(user.referralCode) // И это
+        });
+      } else {
+        res.status(404).json({ error: 'Progress not found' });
+      }
+    } catch (error) {
+      console.error('Error loading progress:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-  } catch (error) {
-    console.error('Error loading progress:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  });
+  
 
 // Обработка команды /start с реферальным кодом
 bot.onText(/\/start (.+)/, async (msg, match) => {
