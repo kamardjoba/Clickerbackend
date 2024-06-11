@@ -1,4 +1,4 @@
-// index.js
+ // index.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -26,8 +26,20 @@ mongoose.connect(process.env.MONGODB_URL, {
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.log(error));
 
-function generateReferralCode() {
-  return Math.random().toString(36).substr(2, 9);
+// Функция генерации уникального реферального кода
+async function generateUniqueReferralCode() {
+  let referralCode;
+  let isUnique = false;
+
+  while (!isUnique) {
+    referralCode = Math.random().toString(36).substr(2, 9);
+    const existingUser = await UserProgress.findOne({ referralCode });
+    if (!existingUser) {
+      isUnique = true;
+    }
+  }
+
+  return referralCode;
 }
 
 function generateTelegramLink(referralCode) {
@@ -183,11 +195,12 @@ bot.on('message', async (msg) => {
 
   if (!user) {
     // Создать нового пользователя, если он не существует
+    const referralCode = await generateUniqueReferralCode(); // Используем уникальный код
     user = new UserProgress({
       telegramId: chatId.toString(),
       username: username,
       profilePhotoUrl,
-      referralCode: generateReferralCode()
+      referralCode
     });
     await user.save();
   }
