@@ -16,7 +16,7 @@ console.log('Module paths:', module.paths);
 const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot"; // Replace with your bot's name
 const app = express();
 const port = process.env.PORT || 3001;
-const token = process.env.token;  // Убедитесь, что это указано в .env файле
+const token = process.env.TOKEN;  // Убедитесь, что это указано в .env файле
 
 let bot;
 try {
