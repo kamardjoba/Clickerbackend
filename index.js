@@ -29,7 +29,7 @@ app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
 
   try {
-    const user = await UserProgress.findById(userId);
+    const user = await User.findById(userId);
     if (user) {
       user.coins = coins;
       user.upgradeCost = upgradeCost;
@@ -58,7 +58,7 @@ app.get('/load-progress', async (req, res) => {
   const userId = req.query.userId;
 
   try {
-    const user = await UserProgress.findById(userId);
+    const user = await User.findById(userId);
     if (user) {
       res.json({
         success: true,
@@ -94,7 +94,7 @@ bot.on('message', async (msg) => {
 
   let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  let user = await UserProgress.findOneAndUpdate(
+  let user = await User.findOneAndUpdate(
     { telegramId: chatId.toString() },
     {
       telegramId: chatId.toString(),
