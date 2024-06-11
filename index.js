@@ -31,7 +31,7 @@ function generateReferralCode() {
 }
 
 function generateTelegramLink(referralCode) {
-  return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
+  return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
 
 async function getProfilePhotoUrl(telegramId) {
