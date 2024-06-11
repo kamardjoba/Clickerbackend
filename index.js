@@ -12,6 +12,7 @@ const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
 const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
+
 const bot = new TelegramBot(token, { polling: true });
 
 app.use(cors());
@@ -91,40 +92,38 @@ app.post('/save-progress', async (req, res) => {
 });
 
 // Загрузка прогресса игры
-// Убедитесь, что эти значения возвращаются в ответе на запрос
 app.get('/load-progress', async (req, res) => {
-    const userId = req.query.userId;
-  
-    try {
-      const user = await UserProgress.findById(userId);
-      if (user) {
-        res.json({
-          success: true,
-          coins: user.coins,
-          upgradeCost: user.upgradeCost,
-          upgradeLevel: user.upgradeLevel,
-          coinPerClick: user.coinPerClick,
-          upgradeCostEnergy: user.upgradeCostEnergy,
-          upgradeLevelEnergy: user.upgradeLevelEnergy,
-          clickLimit: user.clickLimit,
-          energyNow: user.energyNow,
-          upgradeCostEnergyTime: user.upgradeCostEnergyTime,
-          valEnergyTime: user.valEnergyTime,
-          time: user.time,
-          username: user.username,
-          profilePhotoUrl: user.profilePhotoUrl,
-          referralCode: user.referralCode, // Добавьте это
-          telegramLink: generateTelegramLink(user.referralCode) // И это
-        });
-      } else {
-        res.status(404).json({ error: 'Progress not found' });
-      }
-    } catch (error) {
-      console.error('Error loading progress:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+  const userId = req.query.userId;
+
+  try {
+    const user = await UserProgress.findById(userId);
+    if (user) {
+      res.json({
+        success: true,
+        coins: user.coins,
+        upgradeCost: user.upgradeCost,
+        upgradeLevel: user.upgradeLevel,
+        coinPerClick: user.coinPerClick,
+        upgradeCostEnergy: user.upgradeCostEnergy,
+        upgradeLevelEnergy: user.upgradeLevelEnergy,
+        clickLimit: user.clickLimit,
+        energyNow: user.energyNow,
+        upgradeCostEnergyTime: user.upgradeCostEnergyTime,
+        valEnergyTime: user.valEnergyTime,
+        time: user.time,
+        username: user.username,
+        profilePhotoUrl: user.profilePhotoUrl,
+        referralCode: user.referralCode,
+        telegramLink: generateTelegramLink(user.referralCode)
+      });
+    } else {
+      res.status(404).json({ error: 'Progress not found' });
     }
-  });
-  
+  } catch (error) {
+    console.error('Error loading progress:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 // Обработка команды /start с реферальным кодом
 bot.onText(/\/start (.+)/, async (msg, match) => {
@@ -136,7 +135,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 
   if (referrer) {
     // Найдите или создайте нового пользователя
-    const username = msg.from.username;
+    const username = msg.from.username || `user${chatId}`;
     const profilePhotoUrl = await getProfilePhotoUrl(chatId);
     
     let user = await UserProgress.findOneAndUpdate(
@@ -145,7 +144,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
         telegramId: chatId.toString(),
         username: username,
         profilePhotoUrl,
-        referralCode: generateReferralCode() // Новый реферальный код для нового пользователя
+        referralCode: referrer.referralCode // Новый пользователь получает реферальный код от пригласившего
       },
       { upsert: true, new: true }
     );
@@ -168,25 +167,26 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 // Настройка Telegram Bot
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  const username = msg.from.username;
-  const referralCode = generateReferralCode();
-
+  const username = msg.from.username || `user${chatId}`;
   let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  let user = await UserProgress.findOneAndUpdate(
-    { telegramId: chatId.toString() },
-    {
+  // Проверить, существует ли пользователь
+  let user = await UserProgress.findOne({ telegramId: chatId.toString() });
+
+  if (!user) {
+    // Создать нового пользователя, если он не существует
+    user = new UserProgress({
       telegramId: chatId.toString(),
       username: username,
       profilePhotoUrl,
-      referralCode,
-    },
-    { upsert: true, new: true }
-  );
+      referralCode: generateReferralCode()
+    });
+    await user.save();
+  }
 
-  const telegramLink = generateTelegramLink(referralCode);
+  const telegramLink = generateTelegramLink(user.referralCode);
 
-  await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+  await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
     reply_markup: {
       inline_keyboard: [
         [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
