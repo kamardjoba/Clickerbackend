@@ -1,17 +1,22 @@
-// index.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
-const User = require('./user'); // Убедитесь, что путь к user.js верный
+const User = require('./user'); // Ensure the path is correct
 const axios = require('axios');
 
-const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot"; // Замените на имя вашего бота
+// Additional logging to debug
+const fs = require('fs');
+console.log('Current directory:', __dirname);
+console.log('Files in directory:', fs.readdirSync(__dirname));
+console.log('Module paths:', module.paths);
+
+const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot"; // Replace with your bot's name
 const app = express();
 const port = process.env.PORT || 3001;
-const token = process.env.TELEGRAM_TOKEN; // Убедитесь, что это указано в .env файле
+const token = process.env.TELEGRAM_TOKEN;  // Убедитесь, что это указано в .env файле
 
 let bot;
 try {
