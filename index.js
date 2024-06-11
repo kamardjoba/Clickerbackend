@@ -1,4 +1,4 @@
- // index.js
+// index.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -26,24 +26,12 @@ mongoose.connect(process.env.MONGODB_URL, {
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.log(error));
 
-// Функция генерации уникального реферального кода
-async function generateUniqueReferralCode() {
-  let referralCode;
-  let isUnique = false;
-
-  while (!isUnique) {
-    referralCode = Math.random().toString(36).substr(2, 9);
-    const existingUser = await UserProgress.findOne({ referralCode });
-    if (!existingUser) {
-      isUnique = true;
-    }
-  }
-
-  return referralCode;
+function generateReferralCode() {
+  return Math.random().toString(36).substr(2, 9);
 }
 
 function generateTelegramLink(referralCode) {
-  return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
+  return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
 }
 
 async function getProfilePhotoUrl(telegramId) {
@@ -151,16 +139,20 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     const username = msg.from.username || `user${chatId}`;
     const profilePhotoUrl = await getProfilePhotoUrl(chatId);
     
-    let user = await UserProgress.findOneAndUpdate(
-      { telegramId: chatId.toString() },
-      {
+    let user = await UserProgress.findOne({ telegramId: chatId.toString() });
+
+    if (!user) {
+      // Новый пользователь
+      user = new UserProgress({
         telegramId: chatId.toString(),
         username: username,
         profilePhotoUrl,
-        referralCode: referrer.referralCode // Новый пользователь получает реферальный код от пригласившего
-      },
-      { upsert: true, new: true }
-    );
+        referralCode: generateReferralCode()
+      });
+    } else {
+      // Пользователь уже существует, используем его текущий referralCode
+      user.referralCode = user.referralCode || generateReferralCode();
+    }
 
     // Добавьте пользователя в массив рефералов у пригласившего
     if (!referrer.referrals.some(ref => ref.telegramId === chatId.toString())) {
@@ -195,14 +187,16 @@ bot.on('message', async (msg) => {
 
   if (!user) {
     // Создать нового пользователя, если он не существует
-    const referralCode = await generateUniqueReferralCode(); // Используем уникальный код
     user = new UserProgress({
       telegramId: chatId.toString(),
       username: username,
       profilePhotoUrl,
-      referralCode
+      referralCode: generateReferralCode()
     });
     await user.save();
+  } else {
+    // Пользователь уже существует, используем его текущий referralCode
+    user.referralCode = user.referralCode || generateReferralCode();
   }
 
   const telegramLink = generateTelegramLink(user.referralCode);
