@@ -79,10 +79,6 @@ app.post('/save-progress', async (req, res) => {
       user.upgradeCostEnergyTime = upgradeCostEnergyTime;
       user.valEnergyTime = valEnergyTime;
       user.time = time;
-      // Проверяем наличие referralCode, если отсутствует - генерируем новый
-      if (!user.referralCode) {
-        user.referralCode = generateReferralCode();
-      }
       await user.save();
       res.json({ success: true });
     } else {
@@ -141,7 +137,6 @@ bot.on('message', async (msg) => {
       telegramId: chatId.toString(),
       username: username,
       profilePhotoUrl,
-      // Добавьте генерацию referralCode при регистрации нового пользователя
       referralCode: generateReferralCode()
     },
     { upsert: true, new: true }
