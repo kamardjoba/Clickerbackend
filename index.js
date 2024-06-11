@@ -124,10 +124,50 @@ app.get('/load-progress', async (req, res) => {
   }
 });
 
+// Обработка команды /start с реферальным кодом
+bot.onText(/\/start (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const referralCode = match[1];
+  
+  // Найдите пользователя, который отправил код
+  const referrer = await UserProgress.findOne({ referralCode });
+
+  if (referrer) {
+    // Найдите или создайте нового пользователя
+    const username = msg.from.username;
+    const profilePhotoUrl = await getProfilePhotoUrl(chatId);
+    
+    let user = await UserProgress.findOneAndUpdate(
+      { telegramId: chatId.toString() },
+      {
+        telegramId: chatId.toString(),
+        username: username,
+        profilePhotoUrl,
+        referralCode: generateReferralCode() // Новый реферальный код для нового пользователя
+      },
+      { upsert: true, new: true }
+    );
+
+    // Добавьте бонусы обоим пользователям
+    referrer.coins += 5000;
+    await referrer.save();
+
+    user.coins += 5000;
+    await user.save();
+
+    await bot.sendMessage(referrer.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
+    await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
+
+  } else {
+    await bot.sendMessage(chatId, `Реферальный код недействителен.`);
+  }
+});
+
 // Настройка Telegram Bot
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const username = msg.from.username;
+  const referralCode = generateReferralCode();
 
   let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
@@ -137,12 +177,14 @@ bot.on('message', async (msg) => {
       telegramId: chatId.toString(),
       username: username,
       profilePhotoUrl,
-      referralCode: generateReferralCode()
+      referralCode,
     },
     { upsert: true, new: true }
   );
 
-  await bot.sendMessage(chatId, 'Добро пожаловать! Нажмите на кнопку, чтобы начать игру.', {
+  const telegramLink = generateTelegramLink(referralCode);
+
+  await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
     reply_markup: {
       inline_keyboard: [
         [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
