@@ -71,7 +71,13 @@ const userProgressSchema = new mongoose.Schema({
   referralCode: { 
     type: String,
      unique: true
-     }
+     },
+
+     referrals: [{ // Добавляем массив рефералов
+      telegramId: String,
+      username: String,
+      profilePhotoUrl: String
+     }]
 });
 
 const UserProgress = mongoose.model('UserProgress', userProgressSchema);

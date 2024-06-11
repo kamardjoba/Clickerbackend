@@ -31,7 +31,7 @@ function generateReferralCode() {
 }
 
 function generateTelegramLink(referralCode) {
-  return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
+  return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
 }
 
 async function getProfilePhotoUrl(telegramId) {
@@ -114,7 +114,8 @@ app.get('/load-progress', async (req, res) => {
         username: user.username,
         profilePhotoUrl: user.profilePhotoUrl,
         referralCode: user.referralCode,
-        telegramLink: generateTelegramLink(user.referralCode)
+        telegramLink: generateTelegramLink(user.referralCode),
+        referrals: user.referrals // Возвращаем массив рефералов
       });
     } else {
       res.status(404).json({ error: 'Progress not found' });
@@ -149,7 +150,14 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
       { upsert: true, new: true }
     );
 
-    // Добавьте бонусы обоим пользователям
+    // Добавьте пользователя в массив рефералов у пригласившего
+    if (!referrer.referrals.some(ref => ref.telegramId === chatId.toString())) {
+      referrer.referrals.push({
+        telegramId: chatId.toString(),
+        username: username,
+        profilePhotoUrl
+      });
+    }
     referrer.coins += 5000;
     await referrer.save();
 
