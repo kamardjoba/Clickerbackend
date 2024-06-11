@@ -67,7 +67,11 @@ const userProgressSchema = new mongoose.Schema({
   profilePhotoUrl: {
     type: String,
     default: ''
-  }
+  },
+  referralCode: { 
+    type: String,
+     unique: true
+     }
 });
 
 const UserProgress = mongoose.model('UserProgress', userProgressSchema);
