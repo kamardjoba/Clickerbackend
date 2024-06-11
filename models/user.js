@@ -28,16 +28,46 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  gameProgress: {
-    type: Object,
-    default: {
-      upgrades: {
-        coinPerClick: { level: 1, cost: 10 },
-        energy: { level: 1, cost: 100, limit: 1000 },
-        energyTime: { level: 1, cost: 200, time: 2000, val: 0.5 }
-      },
-      miniGameState: {}
-    }
+  // Параметры прогресса игры как отдельные поля
+  upgradeCost: {
+    type: Number,
+    default: 10
+  },
+  upgradeLevel: {
+    type: Number,
+    default: 1
+  },
+  coinPerClick: {
+    type: Number,
+    default: 1
+  },
+  upgradeCostEnergy: {
+    type: Number,
+    default: 100
+  },
+  upgradeLevelEnergy: {
+    type: Number,
+    default: 1
+  },
+  clickLimit: {
+    type: Number,
+    default: 1000
+  },
+  energyNow: {
+    type: Number,
+    default: 1000
+  },
+  upgradeCostEnergyTime: {
+    type: Number,
+    default: 200
+  },
+  valEnergyTime: {
+    type: Number,
+    default: 0.5
+  },
+  time: {
+    type: Number,
+    default: 2000
   }
 });
 
