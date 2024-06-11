@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios'); // Убедитесь, что axios установлен
+const axios = require('axios');
 require('dotenv').config();
 const UserProgress = require('./models/userProgress'); // Убедитесь, что путь правильный
 
@@ -24,6 +24,10 @@ mongoose.connect(process.env.MONGODB_URL, {
 })
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.log(error));
+
+function generateReferralCode() {
+  return Math.random().toString(36).substr(2, 9);
+}
 
 function generateTelegramLink(referralCode) {
   return `https://t.me/${process.env.BOT_USERNAME}?start=${referralCode}`;
@@ -75,6 +79,10 @@ app.post('/save-progress', async (req, res) => {
       user.upgradeCostEnergyTime = upgradeCostEnergyTime;
       user.valEnergyTime = valEnergyTime;
       user.time = time;
+      // Проверяем наличие referralCode, если отсутствует - генерируем новый
+      if (!user.referralCode) {
+        user.referralCode = generateReferralCode();
+      }
       await user.save();
       res.json({ success: true });
     } else {
@@ -132,7 +140,9 @@ bot.on('message', async (msg) => {
     {
       telegramId: chatId.toString(),
       username: username,
-      profilePhotoUrl
+      profilePhotoUrl,
+      // Добавьте генерацию referralCode при регистрации нового пользователя
+      referralCode: generateReferralCode()
     },
     { upsert: true, new: true }
   );
