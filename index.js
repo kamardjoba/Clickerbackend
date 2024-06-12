@@ -62,6 +62,39 @@ async function getProfilePhotoUrl(telegramId) {
   return '';
 }
 
+app.post('/check-subscription', async (req, res) => {
+    const { userId } = req.body;
+  
+    try {
+      const user = await UserProgress.findById(userId);
+      if (user) {
+        // Запрос к Telegram Bot API для проверки подписки
+        const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
+          params: {
+            chat_id: process.env.CHANNEL_ID,
+            user_id: user.telegramId
+          }
+        });
+  
+        const status = chatMemberResponse.data.result.status;
+  
+        if (status === 'member' || status === 'administrator' || status === 'creator') {
+          // Пользователь подписан, начисляем 5000 монет
+          user.coins += 5000;
+          await user.save();
+          res.json({ success: true, message: 'Вы успешно подписались на канал и получили 5000 монет!' });
+        } else {
+          res.json({ success: false, message: 'Вы не подписаны на канал.' });
+        }
+      } else {
+        res.status(404).json({ error: 'User not found' });
+      }
+    } catch (error) {
+      console.error('Error checking subscription:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
 // Сохранение прогресса игры
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
