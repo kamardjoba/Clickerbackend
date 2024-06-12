@@ -64,7 +64,7 @@ async function getProfilePhotoUrl(telegramId) {
 }
 
 // Проверка подписки на канал и начисление монет
-// index.js
+
 app.post('/check-subscription', async (req, res) => {
     const { userId } = req.body;
 
@@ -89,14 +89,22 @@ app.post('/check-subscription', async (req, res) => {
             user.coins += 5000; // Начисляем 5000 монет
             user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
             await user.save();
+            return res.json({ success: true, isSubscribed, message: 'Вы успешно подписались на канал и получили 5000 монет!' });
         }
 
-        res.json({ success: true, isSubscribed, message: isSubscribed ? 'Вы успешно подписались на канал и получили 5000 монет!' : 'Вы не подписаны на канал.' });
+        // Если уже подписан и проверял подписку или не подписан
+        res.json({
+            success: true,
+            isSubscribed,
+            message: isSubscribed ? 'Вы уже получили монеты за подписку.' : 'Вы не подписаны на канал.'
+        });
     } catch (error) {
         console.error('Error checking subscription:', error);
         res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
     }
 });
+
+
 
 
   
