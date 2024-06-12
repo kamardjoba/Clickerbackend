@@ -82,16 +82,22 @@ app.post('/check-subscription', async (req, res) => {
         });
 
         const status = chatMemberResponse.data.result.status;
-
         const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
 
-        // Не добавляем монеты здесь, просто возвращаем статус подписки
-        res.json({ success: true, isSubscribed });
+        if (isSubscribed && !user.hasCheckedSubscription) {
+            // Пользователь подписан и еще не проверял подписку
+            user.coins += 5000; // Начисляем 5000 монет
+            user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
+            await user.save();
+        }
+
+        res.json({ success: true, isSubscribed, message: isSubscribed ? 'Вы успешно подписались на канал и получили 5000 монет!' : 'Вы не подписаны на канал.' });
     } catch (error) {
         console.error('Error checking subscription:', error);
         res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
     }
 });
+
 
   
 // Сохранение прогресса игры
