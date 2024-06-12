@@ -67,6 +67,7 @@ async function getProfilePhotoUrl(telegramId) {
 
 // index.js
 // index.js
+// index.js
 app.post('/check-subscription', async (req, res) => {
     const { userId } = req.body;
 
@@ -88,11 +89,7 @@ app.post('/check-subscription', async (req, res) => {
 
         let message = '';
         if (isSubscribed) {
-            if (!user.hasCheckedSubscription) {
-                message = 'Вы успешно подписались на канал. Нажмите "Проверить Подписку", чтобы получить 5000 монет.';
-            } else {
-                message = 'Вы уже проверяли подписку и получили свои монеты.';
-            }
+            message = 'Вы подписаны на канал. Нажмите "Проверить Подписку", чтобы получить 5000 монет, если вы их еще не получили.';
         } else {
             message = 'Вы не подписаны на канал.';
         }
@@ -104,7 +101,6 @@ app.post('/check-subscription', async (req, res) => {
     }
 });
 
-// Начисление монет при подтверждении подписки
 app.post('/confirm-subscription', async (req, res) => {
     const { userId } = req.body;
 
@@ -114,19 +110,37 @@ app.post('/confirm-subscription', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
         }
 
-        if (!user.hasCheckedSubscription) {
+        if (user.hasCheckedSubscription) {
+            return res.json({ success: false, message: 'Монеты уже были начислены.' });
+        }
+
+        const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
+            params: {
+                chat_id: CHANNEL_ID,
+                user_id: user.telegramId
+            }
+        });
+
+        const status = chatMemberResponse.data.result.status;
+        const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
+
+        if (isSubscribed) {
             user.coins += 5000;
             user.hasCheckedSubscription = true;
             await user.save();
-            res.json({ success: true, message: 'Вам начислено 5000 монет!' });
+            return res.json({ success: true, message: 'Вам начислено 5000 монет!' });
         } else {
-            res.json({ success: false, message: 'Вы уже получили свои монеты.' });
+            return res.json({ success: false, message: 'Вы не подписаны на канал.' });
         }
     } catch (error) {
         console.error('Error confirming subscription:', error);
         res.status(500).json({ success: false, message: 'Ошибка при начислении монет.' });
     }
 });
+
+
+// Начисление монет при подтверждении подписки
+
 
 
 
