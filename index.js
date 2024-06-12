@@ -65,6 +65,7 @@ async function getProfilePhotoUrl(telegramId) {
 
 // Проверка подписки на канал и начисление монет
 
+// index.js
 app.post('/check-subscription', async (req, res) => {
     const { userId } = req.body;
 
@@ -84,20 +85,21 @@ app.post('/check-subscription', async (req, res) => {
         const status = chatMemberResponse.data.result.status;
         const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
 
-        if (isSubscribed && !user.hasCheckedSubscription) {
-            // Пользователь подписан и еще не проверял подписку
-            user.coins += 5000; // Начисляем 5000 монет
-            user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
-            await user.save();
-            return res.json({ success: true, isSubscribed, message: 'Вы успешно подписались на канал и получили 5000 монет!' });
+        let message = '';
+        if (isSubscribed) {
+            if (!user.hasCheckedSubscription) {
+                
+                user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
+                await user.save();
+                message = 'Вы успешно подписались на канал и получили 5000 монет!';
+            } else {
+                message = 'Вы уже проверяли подписку и получили свои монеты.';
+            }
+        } else {
+            message = 'Вы не подписаны на канал.';
         }
 
-        // Если уже подписан и проверял подписку или не подписан
-        res.json({
-            success: true,
-            isSubscribed,
-            message: isSubscribed ? 'Вы уже получили монеты за подписку.' : 'Вы не подписаны на канал.'
-        });
+        res.json({ success: true, isSubscribed, message });
     } catch (error) {
         console.error('Error checking subscription:', error);
         res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
