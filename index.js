@@ -76,20 +76,17 @@ app.post('/check-subscription', async (req, res) => {
 
         const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
             params: {
-                chat_id: CHANNEL_ID, // Убедитесь, что CHANNEL_ID - это идентификатор вашего канала
+                chat_id: CHANNEL_ID,
                 user_id: user.telegramId
             }
         });
 
         const status = chatMemberResponse.data.result.status;
 
-        if (['member', 'administrator', 'creator'].includes(status)) {
-            user.coins += 5000; // Начисляем монеты
-            await user.save();
-            res.json({ success: true, message: 'Вы успешно подписались на канал и получили 5000 монет!' });
-        } else {
-            res.json({ success: false, message: 'Вы не подписаны на канал.' });
-        }
+        const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
+
+        // Не добавляем монеты здесь, просто возвращаем статус подписки
+        res.json({ success: true, isSubscribed });
     } catch (error) {
         console.error('Error checking subscription:', error);
         res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
