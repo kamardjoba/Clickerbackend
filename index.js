@@ -66,8 +66,6 @@ async function getProfilePhotoUrl(telegramId) {
 // Проверка подписки на канал и начисление монет
 
 // index.js
-// index.js
-// index.js
 app.post('/check-subscription', async (req, res) => {
     const { userId } = req.body;
 
@@ -89,59 +87,24 @@ app.post('/check-subscription', async (req, res) => {
 
         let message = '';
         if (isSubscribed) {
-            message = 'Вы подписаны на канал. Нажмите "Проверить Подписку", чтобы получить 5000 монет, если вы их еще не получили.';
+            if (!user.hasCheckedSubscription) {
+                user.coins += 5000; // Начисляем 5000 монет
+                user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
+                await user.save();
+                message = 'Вы успешно подписались на канал и получили 5000 монет!';
+            } else {
+                message = 'Вы уже проверяли подписку и получили свои монеты.';
+            }
         } else {
             message = 'Вы не подписаны на канал.';
         }
 
-        res.json({ success: true, isSubscribed, hasCheckedSubscription: user.hasCheckedSubscription, message });
+        res.json({ success: true, isSubscribed, message });
     } catch (error) {
         console.error('Error checking subscription:', error);
         res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
     }
 });
-
-app.post('/confirm-subscription', async (req, res) => {
-    const { userId } = req.body;
-
-    try {
-        const user = await UserProgress.findById(userId);
-        if (!user) {
-            return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
-        }
-
-        if (user.hasCheckedSubscription) {
-            return res.json({ success: false, message: 'Монеты уже были начислены.' });
-        }
-
-        const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
-            params: {
-                chat_id: CHANNEL_ID,
-                user_id: user.telegramId
-            }
-        });
-
-        const status = chatMemberResponse.data.result.status;
-        const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
-
-        if (isSubscribed) {
-            user.coins += 5000;
-            user.hasCheckedSubscription = true;
-            await user.save();
-            return res.json({ success: true, message: 'Вам начислено 5000 монет!' });
-        } else {
-            return res.json({ success: false, message: 'Вы не подписаны на канал.' });
-        }
-    } catch (error) {
-        console.error('Error confirming subscription:', error);
-        res.status(500).json({ success: false, message: 'Ошибка при начислении монет.' });
-    }
-});
-
-
-// Начисление монет при подтверждении подписки
-
-
 
 
 
