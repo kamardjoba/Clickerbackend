@@ -88,7 +88,7 @@ app.post('/check-subscription', async (req, res) => {
         let message = '';
         if (isSubscribed) {
             if (!user.hasCheckedSubscription) {
-                
+                user.coins += 5000; // Начисляем 5000 монет
                 user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
                 await user.save();
                 message = 'Вы успешно подписались на канал и получили 5000 монет!';
