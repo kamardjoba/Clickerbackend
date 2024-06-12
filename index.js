@@ -62,6 +62,7 @@ async function getProfilePhotoUrl(telegramId) {
   return '';
 }
 
+// Проверка подписки на канал и начисление монет
 app.post('/check-subscription', async (req, res) => {
     const { userId } = req.body;
   
@@ -211,37 +212,34 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 
 // Настройка Telegram Bot
 bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  const username = msg.from.username || `user${chatId}`;
-  let profilePhotoUrl = await getProfilePhotoUrl(chatId);
-
-  // Проверить, существует ли пользователь
-  let user = await UserProgress.findOne({ telegramId: chatId.toString() });
-
-  if (!user) {
-    // Создать нового пользователя, если он не существует
-    user = new UserProgress({
-      telegramId: chatId.toString(),
-      username: username,
-      profilePhotoUrl,
-      referralCode: generateReferralCode()
-    });
-    await user.save();
-  } else {
-    // Пользователь уже существует, используем его текущий referralCode
-    user.referralCode = user.referralCode || generateReferralCode();
-  }
-
-  const telegramLink = generateTelegramLink(user.referralCode);
-
-  await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-      ]
+    const chatId = msg.chat.id;
+    const username = msg.from.username || `user${chatId}`;
+    let profilePhotoUrl = await getProfilePhotoUrl(chatId);
+  
+    // Проверить, существует ли пользователь
+    let user = await UserProgress.findOne({ telegramId: chatId.toString() });
+  
+    if (!user) {
+      // Создать нового пользователя, если он не существует
+      user = new UserProgress({
+        telegramId: chatId.toString(),
+        username: username,
+        profilePhotoUrl,
+        referralCode: generateReferralCode()
+      });
+      await user.save();
     }
+  
+    const telegramLink = generateTelegramLink(user.referralCode);
+  
+    await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+        ]
+      }
+    });
   });
-});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
