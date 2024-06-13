@@ -36,32 +36,33 @@ function generateTelegramLink(referralCode) {
 }
 
 async function getProfilePhotoUrl(telegramId) {
-  try {
-    const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
-      params: {
-        user_id: telegramId,
-        limit: 1
-      }
-    });
-
-    if (response.data.ok && response.data.result.photos.length > 0) {
-      const fileId = response.data.result.photos[0][0].file_id;
-      const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
+    try {
+      const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
         params: {
-          file_id: fileId
+          user_id: telegramId,
+          limit: 1
         }
       });
-
-      if (fileResponse.data.ok) {
-        const filePath = fileResponse.data.result.file_path;
-        return `https://api.telegram.org/file/bot${token}/${filePath}`;
+  
+      if (response.data.ok && response.data.result.photos.length > 0) {
+        const fileId = response.data.result.photos[0][0].file_id;
+        const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
+          params: {
+            file_id: fileId
+          }
+        });
+  
+        if (fileResponse.data.ok) {
+          const filePath = fileResponse.data.result.file_path;
+          return `https://api.telegram.org/file/bot${token}/${filePath}`;
+        }
       }
+    } catch (error) {
+      console.error('Ошибка при получении фото профиля:', error);
     }
-  } catch (error) {
-    console.error('Error fetching profile photo:', error);
+    return '';
   }
-  return '';
-}
+  
 
 // Проверка подписки на канал и начисление монет
 
@@ -141,38 +142,39 @@ app.post('/save-progress', async (req, res) => {
 
 // Загрузка прогресса игры
 app.get('/load-progress', async (req, res) => {
-  const userId = req.query.userId;
-
-  try {
-    const user = await UserProgress.findById(userId);
-    if (user) {
-      res.json({
-        success: true,
-        coins: user.coins,
-        upgradeCost: user.upgradeCost,
-        upgradeLevel: user.upgradeLevel,
-        coinPerClick: user.coinPerClick,
-        upgradeCostEnergy: user.upgradeCostEnergy,
-        upgradeLevelEnergy: user.upgradeLevelEnergy,
-        clickLimit: user.clickLimit,
-        energyNow: user.energyNow,
-        upgradeCostEnergyTime: user.upgradeCostEnergyTime,
-        valEnergyTime: user.valEnergyTime,
-        time: user.time,
-        username: user.username,
-        profilePhotoUrl: user.profilePhotoUrl,
-        referralCode: user.referralCode,
-        telegramLink: generateTelegramLink(user.referralCode),
-        referrals: user.referrals // Возвращаем массив рефералов
-      });
-    } else {
-      res.status(404).json({ error: 'Progress not found' });
+    const userId = req.query.userId;
+  
+    try {
+      const user = await UserProgress.findById(userId);
+      if (user) {
+        res.json({
+          success: true,
+          coins: user.coins,
+          upgradeCost: user.upgradeCost,
+          upgradeLevel: user.upgradeLevel,
+          coinPerClick: user.coinPerClick,
+          upgradeCostEnergy: user.upgradeCostEnergy,
+          upgradeLevelEnergy: user.upgradeLevelEnergy,
+          clickLimit: user.clickLimit,
+          energyNow: user.energyNow,
+          upgradeCostEnergyTime: user.upgradeCostEnergyTime,
+          valEnergyTime: user.valEnergyTime,
+          time: user.time,
+          username: user.username,
+          profilePhotoUrl: user.profilePhotoUrl || '',
+          referralCode: user.referralCode,
+          telegramLink: generateTelegramLink(user.referralCode),
+          referrals: user.referrals
+        });
+      } else {
+        res.status(404).json({ error: 'Прогресс не найден' });
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке прогресса:', error);
+      res.status(500).json({ error: 'Внутренняя ошибка сервера' });
     }
-  } catch (error) {
-    console.error('Error loading progress:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  });
+  
 
 // Обработка команды /start с реферальным кодом
 // index.js
