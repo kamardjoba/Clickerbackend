@@ -18,12 +18,6 @@ const bot = new TelegramBot(token, { polling: true });
 app.use(cors());
 app.use(express.json()); // Замена body-parser
 
-const mongooseOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  reconnectTries: Number.MAX_VALUE,
-  reconnectInterval: 500,
-};
 
 mongoose.connect(process.env.MONGODB_URL, mongooseOptions)
   .then(() => console.log('MongoDB connected'))
