@@ -251,7 +251,8 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   
     await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
     await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
-  });  
+  });
+  
 
 // Обновление фото профиля пользователя
 app.post('/update-profile-photo', async (req, res) => {
