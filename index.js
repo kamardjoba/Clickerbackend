@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 require('dotenv').config();
-const UserProgress = require('./models/userProgress'); // Убедитесь, что путь правильный
+const UserProgress = require('./models/userProgres'); // Убедитесь, что путь правильный
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -24,71 +24,63 @@ mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTop
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
-// Функция для генерации реферального кода
 function generateReferralCode() {
   return Math.random().toString(36).substr(2, 9);
 }
 
-// Функция для генерации ссылки на Telegram с реферальным кодом
 function generateTelegramLink(referralCode) {
   return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
 
-// Функция для получения URL фото профиля
-// index.js
 async function getProfilePhotoUrl(telegramId) {
-    try {
-      // Запрос на получение фото профиля
-      const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
+  try {
+    const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
+      params: {
+        user_id: telegramId,
+        limit: 1
+      }
+    });
+
+    if (response.data.ok && response.data.result.photos.length > 0) {
+      const fileId = response.data.result.photos[0][0].file_id;
+      const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
         params: {
-          user_id: telegramId,
-          limit: 1
+          file_id: fileId
         }
       });
-  
-      // Проверка ответа API
-      if (response.data.ok && response.data.result.photos.length > 0) {
-        const fileId = response.data.result.photos[0][0].file_id;
-  
-        // Запрос на получение файла
-        const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
-          params: {
-            file_id: fileId
-          }
-        });
-  
-        // Проверка ответа API
-        if (fileResponse.data.ok) {
-          const filePath = fileResponse.data.result.file_path;
-          return `https://api.telegram.org/file/bot${token}/${filePath}`;
-        } else {
-          console.error('Error fetching file:', fileResponse.data);
-          throw new Error('Failed to fetch file');
-        }
-      } else {
-        console.error('No profile photo found:', response.data);
-        return ''; // Возвращаем пустую строку, если фото профиля нет
-      }
-    } catch (error) {
-      console.error('Error fetching profile photo:', error.message);
-      throw error; // Перебрасываем ошибку для обработки на уровне вызова
-    }
-  }
-  
 
-// Функция для обновления фото профиля пользователя
-async function updateProfilePhoto(telegramId) {
-  const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
-  if (profilePhotoUrl) {
-    await UserProgress.findOneAndUpdate(
-      { telegramId },
-      { profilePhotoUrl },
-      { new: true }
-    );
+      if (fileResponse.data.ok) {
+        const filePath = fileResponse.data.result.file_path;
+        return `https://api.telegram.org/file/bot${token}/${filePath}`;
+      } else {
+        console.error('Error fetching file:', fileResponse.data);
+        throw new Error('Failed to fetch file');
+      }
+    } else {
+      console.error('No profile photo found:', response.data);
+      return ''; // Возвращаем пустую строку, если фото профиля нет
+    }
+  } catch (error) {
+    console.error('Error fetching profile photo:', error.message);
+    throw error; // Перебрасываем ошибку для обработки на уровне вызова
   }
 }
 
-// Проверка подписки на канал и начисление монет
+async function updateProfilePhoto(telegramId) {
+  try {
+    const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
+    if (profilePhotoUrl) {
+      await UserProgress.findOneAndUpdate(
+        { telegramId },
+        { profilePhotoUrl },
+        { new: true }
+      );
+    }
+  } catch (error) {
+    console.error('Error updating profile photo:', error.message);
+  }
+}
+
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
 
@@ -129,7 +121,6 @@ app.post('/check-subscription', async (req, res) => {
   }
 });
 
-// Сохранение прогресса игры
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
 
@@ -158,14 +149,12 @@ app.post('/save-progress', async (req, res) => {
   }
 });
 
-// Загрузка прогресса игры
 app.get('/load-progress', async (req, res) => {
   const userId = req.query.userId;
 
   try {
     const user = await UserProgress.findById(userId);
     if (user) {
-      // Обновляем фото профиля перед возвратом данных
       await updateProfilePhoto(user.telegramId);
       res.json({
         success: true,
@@ -246,33 +235,31 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 });
 
 // Обновление фото профиля пользователя
-// index.js
 app.post('/update-profile-photo', async (req, res) => {
-    const { telegramId } = req.body;
-  
-    try {
-      const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
-      if (!profilePhotoUrl) {
-        return res.status(404).json({ success: false, message: 'Фото профиля не найдено.' });
-      }
-  
-      const user = await UserProgress.findOneAndUpdate(
-        { telegramId },
-        { profilePhotoUrl },
-        { new: true }
-      );
-  
-      if (!user) {
-        return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
-      }
-  
-      res.json({ success: true, profilePhotoUrl });
-    } catch (error) {
-      console.error('Error updating profile photo:', error.message);
-      res.status(500).json({ success: false, message: 'Ошибка при обновлении фото профиля.' });
+  const { telegramId } = req.body;
+
+  try {
+    const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
+    if (!profilePhotoUrl) {
+      return res.status(404).json({ success: false, message: 'Фото профиля не найдено.' });
     }
-  });
-  
+
+    const user = await UserProgress.findOneAndUpdate(
+      { telegramId },
+      { profilePhotoUrl },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
+    }
+
+    res.json({ success: true, profilePhotoUrl });
+  } catch (error) {
+    console.error('Error updating profile photo:', error.message);
+    res.status(500).json({ success: false, message: 'Ошибка при обновлении фото профиля.' });
+  }
+});
 
 // Настройка Telegram Bot
 bot.on('message', async (msg) => {
