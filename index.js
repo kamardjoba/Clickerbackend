@@ -121,6 +121,7 @@ app.post('/check-subscription', async (req, res) => {
     }
   });
   
+  
 
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
@@ -208,36 +209,49 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
         referralCode: generateReferralCode(),
         referredBy: referrer ? referrer._id : null // Сохранить реферальную связь
       });
+  
+      if (referrer) {
+        referrer.referrals.push({
+          telegramId: chatId.toString(),
+          username: username,
+          profilePhotoUrl
+        });
+        referrer.coins += 5000; // Награда за реферала
+        await referrer.save();
+  
+        user.coins += 5000; // Награда за регистрацию по реферальной ссылке
+      }
+      await user.save();
     } else {
       // Пользователь уже существует, проверяем его реферальный код
       if (user.referralCode === referralCode) {
         return bot.sendMessage(chatId, `Вы не можете использовать свою собственную реферальную ссылку.`);
       }
-    }
   
-    // Проверка, что пользователь не уже зарегистрирован по другой реферальной ссылке
-    if (user.referredBy && user.referredBy.toString() !== referrer?._id.toString()) {
-      return bot.sendMessage(chatId, `Вы уже зарегистрированы по другой реферальной ссылке.`);
-    }
+      // Проверка, что пользователь не уже зарегистрирован по другой реферальной ссылке
+      if (user.referredBy && user.referredBy.toString() !== referrer?._id.toString()) {
+        return bot.sendMessage(chatId, `Вы уже зарегистрированы по другой реферальной ссылке.`);
+      }
   
-    // Добавьте пользователя в массив рефералов у пригласившего
-    if (referrer && !referrer.referrals.some(ref => ref.telegramId === chatId.toString())) {
-      referrer.referrals.push({
-        telegramId: chatId.toString(),
-        username: username,
-        profilePhotoUrl
-      });
-      referrer.coins += 5000; // Награда за реферала
-      await referrer.save();
-    }
+      // Если пользователь зарегистрирован по той же ссылке, но не получил награду
+      if (referrer && !user.referredBy) {
+        referrer.referrals.push({
+          telegramId: chatId.toString(),
+          username: username,
+          profilePhotoUrl
+        });
+        referrer.coins += 5000; // Награда за реферала
+        await referrer.save();
   
-    user.coins += 5000; // Награда за регистрацию по реферальной ссылке
-    await user.save();
+        user.coins += 5000; // Награда за регистрацию по реферальной ссылке
+        user.referredBy = referrer._id;
+        await user.save();
+      }
+    }
   
     await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
     await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
-  });
-  
+  });  
 
 // Обновление фото профиля пользователя
 app.post('/update-profile-photo', async (req, res) => {
