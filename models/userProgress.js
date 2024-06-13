@@ -84,6 +84,6 @@ const userProgressSchema = new mongoose.Schema({
      }]
 });
 
-const UserProgress = mongoose.model('UserProgress', userProgressSchema);
+const UserProgress = mongoose.model('UserProgres', userProgressSchema);
 
 module.exports = UserProgress;
