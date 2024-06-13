@@ -37,6 +37,8 @@ function generateTelegramLink(referralCode) {
 
 // index.js
 
+// index.js
+
 async function getProfilePhotoUrl(telegramId) {
     try {
       const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
@@ -58,12 +60,15 @@ async function getProfilePhotoUrl(telegramId) {
           const filePath = fileResponse.data.result.file_path;
           return `https://api.telegram.org/file/bot${token}/${filePath}`;
         }
+      } else {
+        console.error('Telegram API response not OK:', response.data);
       }
     } catch (error) {
       console.error('Error fetching profile photo:', error);
     }
     return '';
   }
+  
   
 
 // Проверка подписки на канал и начисление монет
