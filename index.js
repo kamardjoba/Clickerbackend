@@ -83,43 +83,44 @@ async function updateProfilePhoto(telegramId) {
 
 app.post('/check-subscription', async (req, res) => {
     const { userId } = req.body;
-  
+
     try {
-      const user = await UserProgress.findById(userId);
-      if (!user) {
-        return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
-      }
-  
-      const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
-        params: {
-          chat_id: CHANNEL_ID,
-          user_id: user.telegramId
+        const user = await UserProgress.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
         }
-      });
-  
-      const status = chatMemberResponse.data.result.status;
-      const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
-  
-      let message = '';
-      if (isSubscribed) {
-        if (!user.hasCheckedSubscription) {
-          user.coins += 5000; // Начисляем 5000 монет
-          user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
-          await user.save();
-          message = 'Вы успешно подписались на канал и получили 5000 монет!';
+
+        const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
+            params: {
+                chat_id: CHANNEL_ID,
+                user_id: user.telegramId
+            }
+        });
+
+        const status = chatMemberResponse.data.result.status;
+        const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
+
+        let message = '';
+        if (isSubscribed) {
+            if (!user.hasCheckedSubscription) {
+                user.coins += 5000; // Начисляем 5000 монет
+                user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
+                await user.save();
+                message = 'Вы успешно подписались на канал и получили 5000 монет!';
+            } else {
+                message = 'Вы уже проверяли подписку и получили свои монеты.';
+            }
         } else {
-          message = 'Вы уже проверяли подписку и получили свои монеты.';
+            message = 'Вы не подписаны на канал.';
         }
-      } else {
-        message = 'Вы не подписаны на канал.';
-      }
-  
-      res.json({ success: true, isSubscribed, message });
+
+        res.json({ success: true, isSubscribed, hasCheckedSubscription: user.hasCheckedSubscription, message });
     } catch (error) {
-      console.error('Error checking subscription:', error);
-      res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
+        console.error('Error checking subscription:', error);
+        res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
     }
-  });
+});
+
   
   
 
