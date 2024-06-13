@@ -2,11 +2,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 require('dotenv').config();
-const UserProgress = require('./models/userProgress'); // Убедитесь, что путь правильный
+const UserProgress = require('./models/userProgress');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -17,12 +16,18 @@ const CHANNEL_ID = -1002202574694;
 const bot = new TelegramBot(token, { polling: true });
 
 app.use(cors());
-app.use(bodyParser.json());
-app.use(express.json());
+app.use(express.json()); // Замена body-parser
 
-mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+const mongooseOptions = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  reconnectTries: Number.MAX_VALUE,
+  reconnectInterval: 500,
+};
+
+mongoose.connect(process.env.MONGODB_URL, mongooseOptions)
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
+  .catch(err => console.log('MongoDB connection error:', err));
 
 function generateReferralCode() {
   return Math.random().toString(36).substr(2, 9);
@@ -35,34 +40,32 @@ function generateTelegramLink(referralCode) {
 async function getProfilePhotoUrl(telegramId) {
   try {
     const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
-      params: {
-        user_id: telegramId,
-        limit: 1
-      }
+      params: { user_id: telegramId, limit: 1 }
     });
 
     if (response.data.ok && response.data.result.photos.length > 0) {
       const fileId = response.data.result.photos[0][0].file_id;
-      const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
-        params: {
-          file_id: fileId
-        }
-      });
-
-      if (fileResponse.data.ok) {
-        const filePath = fileResponse.data.result.file_path;
-        return `https://api.telegram.org/file/bot${token}/${filePath}`;
-      } else {
-        console.error('Error fetching file:', fileResponse.data);
-        throw new Error('Failed to fetch file');
-      }
-    } else {
-      console.error('No profile photo found:', response.data);
-      return ''; // Возвращаем пустую строку, если фото профиля нет
+      return await getFileUrl(fileId);
     }
+    console.error('No profile photo found:', response.data);
+    return '';
   } catch (error) {
     console.error('Error fetching profile photo:', error.message);
-    throw error; // Перебрасываем ошибку для обработки на уровне вызова
+    throw error;
+  }
+}
+
+async function getFileUrl(fileId) {
+  try {
+    const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, { params: { file_id: fileId } });
+    if (fileResponse.data.ok) {
+      return `https://api.telegram.org/file/bot${token}/${fileResponse.data.result.file_path}`;
+    }
+    console.error('Error fetching file:', fileResponse.data);
+    return '';
+  } catch (error) {
+    console.error('Error fetching file:', error.message);
+    throw error;
   }
 }
 
@@ -91,10 +94,7 @@ app.post('/check-subscription', async (req, res) => {
     }
 
     const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
-      params: {
-        chat_id: CHANNEL_ID,
-        user_id: user.telegramId
-      }
+      params: { chat_id: CHANNEL_ID, user_id: user.telegramId }
     });
 
     const status = chatMemberResponse.data.result.status;
@@ -103,8 +103,8 @@ app.post('/check-subscription', async (req, res) => {
     let message = '';
     if (isSubscribed) {
       if (!user.hasCheckedSubscription) {
-        user.coins += 5000; // Начисляем 5000 монет
-        user.hasCheckedSubscription = true; // Отмечаем, что подписка была проверена
+        user.coins += 5000;
+        user.hasCheckedSubscription = true;
         await user.save();
         message = 'Вы успешно подписались на канал и получили 5000 монет!';
       } else {
@@ -173,7 +173,7 @@ app.get('/load-progress', async (req, res) => {
         profilePhotoUrl: user.profilePhotoUrl,
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
-        referrals: user.referrals // Возвращаем массив рефералов
+        referrals: user.referrals
       });
     } else {
       res.status(404).json({ error: 'Progress not found' });
@@ -184,23 +184,19 @@ app.get('/load-progress', async (req, res) => {
   }
 });
 
-// Обработка команды /start с реферальным кодом
 bot.onText(/\/start (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const referralCode = match[1];
 
-  // Найдите пользователя, который отправил код
   const referrer = await UserProgress.findOne({ referralCode });
 
   if (referrer) {
-    // Найдите или создайте нового пользователя
     const username = msg.from.username || `user${chatId}`;
     const profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
     let user = await UserProgress.findOne({ telegramId: chatId.toString() });
 
     if (!user) {
-      // Новый пользователь
       user = new UserProgress({
         telegramId: chatId.toString(),
         username: username,
@@ -208,11 +204,9 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
         referralCode: generateReferralCode()
       });
     } else {
-      // Пользователь уже существует, используем его текущий referralCode
       user.referralCode = user.referralCode || generateReferralCode();
     }
 
-    // Добавьте пользователя в массив рефералов у пригласившего
     if (!referrer.referrals.some(ref => ref.telegramId === chatId.toString())) {
       referrer.referrals.push({
         telegramId: chatId.toString(),
@@ -228,13 +222,11 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 
     await bot.sendMessage(referrer.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
     await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
-
   } else {
     await bot.sendMessage(chatId, `Реферальный код недействителен.`);
   }
 });
 
-// Обновление фото профиля пользователя
 app.post('/update-profile-photo', async (req, res) => {
   const { telegramId } = req.body;
 
@@ -261,17 +253,14 @@ app.post('/update-profile-photo', async (req, res) => {
   }
 });
 
-// Настройка Telegram Bot
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const username = msg.from.username || `user${chatId}`;
-  let profilePhotoUrl = await getProfilePhotoUrl(chatId);
+  const profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  // Проверить, существует ли пользователь
   let user = await UserProgress.findOne({ telegramId: chatId.toString() });
 
   if (!user) {
-    // Создать нового пользователя, если он не существует
     user = new UserProgress({
       telegramId: chatId.toString(),
       username: username,
@@ -292,6 +281,11 @@ bot.on('message', async (msg) => {
       ]
     }
   });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
 app.listen(port, () => {
