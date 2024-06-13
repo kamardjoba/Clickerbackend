@@ -175,54 +175,65 @@ app.get('/load-progress', async (req, res) => {
 });
 
 // Обработка команды /start с реферальным кодом
+// index.js
+
 bot.onText(/\/start (.+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  const referralCode = match[1];
-  
-  // Найдите пользователя, который отправил код
-  const referrer = await UserProgress.findOne({ referralCode });
-
-  if (referrer) {
-    // Найдите или создайте нового пользователя
-    const username = msg.from.username || `user${chatId}`;
-    const profilePhotoUrl = await getProfilePhotoUrl(chatId);
+    const chatId = msg.chat.id;
+    const referralCode = match[1];
     
-    let user = await UserProgress.findOne({ telegramId: chatId.toString() });
-
-    if (!user) {
-      // Новый пользователь
-      user = new UserProgress({
-        telegramId: chatId.toString(),
-        username: username,
-        profilePhotoUrl,
-        referralCode: generateReferralCode()
-      });
+    // Найдите пользователя, который отправил код
+    const referrer = await UserProgress.findOne({ referralCode });
+  
+    if (referrer) {
+      // Найдите или создайте нового пользователя
+      const username = msg.from.username || `user${chatId}`;
+      const profilePhotoUrl = await getProfilePhotoUrl(chatId);
+      
+      let user = await UserProgress.findOne({ telegramId: chatId.toString() });
+  
+      if (!user) {
+        // Новый пользователь
+        user = new UserProgress({
+          telegramId: chatId.toString(),
+          username: username,
+          profilePhotoUrl,
+          referralCode: generateReferralCode(),
+          referredBy: referrer._id // Ссылка на пригласившего
+        });
+      } else if (user.referralCode === referralCode) {
+        await bot.sendMessage(chatId, `Вы не можете использовать свой собственный реферальный код.`);
+        return;
+      } else if (user.referredBy) {
+        await bot.sendMessage(chatId, `Вы уже использовали реферальный код.`);
+        return;
+      } else {
+        // Пользователь уже существует, используем его текущий referralCode
+        user.referralCode = user.referralCode || generateReferralCode();
+        user.referredBy = referrer._id; // Ссылка на пригласившего
+      }
+  
+      // Добавьте пользователя в массив рефералов у пригласившего
+      if (!referrer.referrals.some(ref => ref.telegramId === chatId.toString())) {
+        referrer.referrals.push({
+          telegramId: chatId.toString(),
+          username: username,
+          profilePhotoUrl
+        });
+      }
+      referrer.coins += 5000;
+      await referrer.save();
+  
+      user.coins += 5000;
+      await user.save();
+  
+      await bot.sendMessage(referrer.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
+      await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
+  
     } else {
-      // Пользователь уже существует, используем его текущий referralCode
-      user.referralCode = user.referralCode || generateReferralCode();
+      await bot.sendMessage(chatId, `Реферальный код недействителен.`);
     }
-
-    // Добавьте пользователя в массив рефералов у пригласившего
-    if (!referrer.referrals.some(ref => ref.telegramId === chatId.toString())) {
-      referrer.referrals.push({
-        telegramId: chatId.toString(),
-        username: username,
-        profilePhotoUrl
-      });
-    }
-    referrer.coins += 5000;
-    await referrer.save();
-
-    user.coins += 5000;
-    await user.save();
-
-    await bot.sendMessage(referrer.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
-    await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
-
-  } else {
-    await bot.sendMessage(chatId, `Реферальный код недействителен.`);
-  }
-});
+  });
+  
 
 // Настройка Telegram Bot
 bot.on('message', async (msg) => {

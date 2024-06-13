@@ -62,7 +62,8 @@ const userProgressSchema = new mongoose.Schema({
   },
   referredBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'UserProgress'
+    ref: 'UserProgress',
+    default: null // По умолчанию null
   },
   profilePhotoUrl: {
     type: String,
@@ -76,7 +77,7 @@ const userProgressSchema = new mongoose.Schema({
   hasCheckedSubscription: {
      type: Boolean, 
      default: false },
-     
+
   referrals: [{ // Добавляем массив рефералов
       telegramId: String,
       username: String,
