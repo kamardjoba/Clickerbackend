@@ -1,3 +1,4 @@
+// index.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -10,7 +11,7 @@ const UserProgress = require('./models/userProgress');
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
-const BOT_USERNAME = "your_bot_username";
+const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const CHANNEL_ID = -1002202574694;
 
 const bot = new TelegramBot(token, { polling: true });
@@ -314,46 +315,10 @@ bot.on('message', async (msg) => {
   await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
     reply_markup: {
       inline_keyboard: [
-        [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }],
-        [{ text: 'Обновить данные', callback_data: 'update_info' }]
+        [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
       ]
     }
   });
-});
-
-// Обработка нажатий на инлайн-кнопки
-bot.on('callback_query', async (callbackQuery) => {
-  const message = callbackQuery.message;
-  const data = callbackQuery.data;
-
-  try {
-    if (data === 'update_info') {
-      // Загрузка актуальных данных, например, из базы данных
-      const user = await UserProgress.findOne({ telegramId: message.chat.id.toString() });
-
-      if (user) {
-        const newText = `Актуальная информация:
-- Монеты: ${user.coins}
-- Уровень: ${user.upgradeLevel}
-- Монет за клик: ${user.coinPerClick}`;
-
-        await bot.editMessageText(newText, {
-          chat_id: message.chat.id,
-          message_id: message.message_id,
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }],
-              [{ text: 'Обновить данные', callback_data: 'update_info' }]
-            ]
-          }
-        });
-      } else {
-        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Пользователь не найден' });
-      }
-    }
-  } catch (error) {
-    console.error('Error handling callback query:', error);
-  }
 });
 
 app.listen(port, () => {
