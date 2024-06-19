@@ -11,7 +11,7 @@ const UserProgress = require('./models/userProgress');
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
-const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
+const BOT_USERNAME = "your_bot_username";
 const CHANNEL_ID = -1002202574694;
 
 const bot = new TelegramBot(token, { polling: true });
@@ -57,11 +57,20 @@ async function getProfilePhotoUrl(telegramId) {
         return '';
       }
     } else {
-      console.error('No profile photo found:', response.data);
-      return '';
+      if (response.data.result && response.data.result.total_count === 0) {
+        console.error('No profile photo found for user:', telegramId);
+        return ''; // No photos available for this user
+      } else {
+        console.error('Error response from Telegram API:', response.data);
+        return '';
+      }
     }
   } catch (error) {
-    console.error('Error fetching profile photo:', error.message);
+    if (error.response) {
+      console.error(`Error fetching profile photo (status: ${error.response.status})`, error.response.data);
+    } else {
+      console.error('Error fetching profile photo:', error.message);
+    }
     return '';
   }
 }
@@ -70,11 +79,16 @@ async function updateProfilePhoto(telegramId) {
   try {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
     if (profilePhotoUrl) {
-      await UserProgress.findOneAndUpdate(
+      const updatedUser = await UserProgress.findOneAndUpdate(
           { telegramId },
           { profilePhotoUrl },
           { new: true }
       );
+      if (!updatedUser) {
+        console.error('User not found for updating profile photo:', telegramId);
+      }
+    } else {
+      console.warn('No profile photo URL returned for user:', telegramId);
     }
   } catch (error) {
     console.error('Error updating profile photo:', error.message);
