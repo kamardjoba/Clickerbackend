@@ -192,6 +192,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   const username = msg.from.username || `user${chatId}`;
   const profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
+  // Check if the user already exists before creating
   let user = await UserProgress.findOne({ telegramId: chatId.toString() });
 
   if (!user) {
@@ -280,6 +281,7 @@ bot.on('message', async (msg) => {
   const username = msg.from.username || `user${chatId}`;
   let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
+  // Check if the user already exists before creating
   let user = await UserProgress.findOne({ telegramId: chatId.toString() });
 
   if (!user) {
