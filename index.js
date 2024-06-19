@@ -204,15 +204,18 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     });
 
     if (referrer) {
-      referrer.referrals.push({
-        telegramId: chatId.toString(),
-        username,
-        profilePhotoUrl
-      });
-      referrer.coins += 5000;
-      await referrer.save();
-
-      user.coins += 5000;
+      // Check if the user is already a referral
+      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
+      if (!isAlreadyReferred) {
+        referrer.referrals.push({
+          telegramId: chatId.toString(),
+          username,
+          profilePhotoUrl
+        });
+        referrer.coins += 5000;
+        await referrer.save();
+        user.coins += 5000;
+      }
     }
     await user.save();
   } else {
@@ -225,17 +228,20 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     }
 
     if (referrer && !user.referredBy) {
-      referrer.referrals.push({
-        telegramId: chatId.toString(),
-        username,
-        profilePhotoUrl
-      });
-      referrer.coins += 5000;
-      await referrer.save();
-
-      user.coins += 5000;
-      user.referredBy = referrer._id;
-      await user.save();
+      // Check if the user is already a referral
+      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
+      if (!isAlreadyReferred) {
+        referrer.referrals.push({
+          telegramId: chatId.toString(),
+          username,
+          profilePhotoUrl
+        });
+        referrer.coins += 5000;
+        await referrer.save();
+        user.coins += 5000;
+        user.referredBy = referrer._id;
+        await user.save();
+      }
     }
   }
 
