@@ -118,7 +118,7 @@ app.post('/check-subscription', async (req, res) => {
     let message = '';
     if (isSubscribed) {
       if (!user.hasCheckedSubscription) {
-        user.coins += 5000;
+        user.clicks += 5000;
         user.hasCheckedSubscription = true;
         await user.save();
         message = 'Вы успешно подписались на канал и получили 5000 монет!';
@@ -137,12 +137,12 @@ app.post('/check-subscription', async (req, res) => {
 });
 
 app.post('/save-progress', async (req, res) => {
-  const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
+  const { userId, clicks, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
 
   try {
     const user = await UserProgress.findById(userId);
     if (user) {
-      user.coins = coins;
+      user.clicks = clicks;
       user.upgradeCost = upgradeCost;
       user.upgradeLevel = upgradeLevel;
       user.coinPerClick = coinPerClick;
@@ -173,7 +173,7 @@ app.get('/load-progress', async (req, res) => {
       await updateProfilePhoto(user.telegramId);
       res.json({
         success: true,
-        coins: user.coins,
+        clicks: user.clicks,
         upgradeCost: user.upgradeCost,
         upgradeLevel: user.upgradeLevel,
         coinPerClick: user.coinPerClick,
@@ -228,9 +228,9 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
           username,
           profilePhotoUrl
         });
-        referrer.coins += 5000;
+        referrer.clicks += 5000;
         await referrer.save();
-        user.coins += 5000;
+        user.clicks += 5000;
       }
     }
     await user.save();
@@ -252,9 +252,9 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
           username,
           profilePhotoUrl
         });
-        referrer.coins += 5000;
+        referrer.clicks += 5000;
         await referrer.save();
-        user.coins += 5000;
+        user.clicks += 5000;
         user.referredBy = referrer._id;
         await user.save();
       }
