@@ -76,32 +76,25 @@ async function getProfilePhotoUrl(telegramId) {
 }
 
 
-app.post('/update-profile-photo', async (req, res) => {
-  const { telegramId } = req.body;
-
+async function updateProfilePhoto(telegramId) {
   try {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
-    if (!profilePhotoUrl) {
-      return res.status(404).json({ success: false, message: 'Фото профиля не найдено.' });
+    if (profilePhotoUrl) {
+      const updatedUser = await UserProgress.findOneAndUpdate(
+          { telegramId },
+          { profilePhotoUrl },
+          { new: true }
+      );
+      if (!updatedUser) {
+        console.error('User not found for updating profile photo:', telegramId);
+      }
+    } else {
+      console.warn('No profile photo URL returned for user:', telegramId);
     }
-
-    const user = await UserProgress.findOneAndUpdate(
-        { telegramId },
-        { profilePhotoUrl },
-        { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
-    }
-
-    res.json({ success: true, profilePhotoUrl });
   } catch (error) {
-    console.error('Ошибка при обновлении фото профиля:', error.message);
-    res.status(500).json({ success: false, message: 'Ошибка при обновлении фото профиля.' });
+    console.error('Error updating profile photo:', error.message);
   }
-});
-
+}
 
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
@@ -293,10 +286,11 @@ app.post('/update-profile-photo', async (req, res) => {
 
     res.json({ success: true, profilePhotoUrl });
   } catch (error) {
-    console.error('Error updating profile photo:', error.message);
+    console.error('Ошибка при обновлении фото профиля:', error.message);
     res.status(500).json({ success: false, message: 'Ошибка при обновлении фото профиля.' });
   }
 });
+
 
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
