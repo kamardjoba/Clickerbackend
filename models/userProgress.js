@@ -11,7 +11,7 @@ const userProgressSchema = new mongoose.Schema({
     type: String,
     required: false
   },
-  clicks: {
+  coins: {
     type: Number,
     default: 0
   },
