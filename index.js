@@ -265,31 +265,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
 });
 
-app.post('/update-profile-photo', async (req, res) => {
-  const { telegramId } = req.body;
 
-  try {
-    const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
-    if (!profilePhotoUrl) {
-      return res.status(404).json({ success: false, message: 'Фото профиля не найдено.' });
-    }
-
-    const user = await UserProgress.findOneAndUpdate(
-        { telegramId },
-        { profilePhotoUrl },
-        { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
-    }
-
-    res.json({ success: true, profilePhotoUrl });
-  } catch (error) {
-    console.error('Ошибка при обновлении фото профиля:', error.message);
-    res.status(500).json({ success: false, message: 'Ошибка при обновлении фото профиля.' });
-  }
-});
 
 
 bot.on('message', async (msg) => {
