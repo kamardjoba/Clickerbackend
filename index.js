@@ -75,7 +75,6 @@ async function getProfilePhotoUrl(telegramId) {
   }
 }
 
-
 async function updateProfilePhoto(telegramId) {
   try {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
@@ -235,15 +234,11 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     }
     await user.save();
   } else {
-    if (user.referralCode === referralCode) {
-      return bot.sendMessage(chatId, `Вы не можете использовать свою собственную реферальную ссылку.`);
+    if (user.referredBy) {
+      return bot.sendMessage(chatId, `Вы уже зарегистрированы по реферальной ссылке.`);
     }
 
-    if (user.referredBy && user.referredBy.toString() !== referrer?._id.toString()) {
-      return bot.sendMessage(chatId, `Вы уже зарегистрированы по другой реферальной ссылке.`);
-    }
-
-    if (referrer && !user.referredBy) {
+    if (referrer) {
       // Check if the user is already a referral
       const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
       if (!isAlreadyReferred) {
@@ -254,7 +249,6 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
         });
         referrer.coins += 5000;
         await referrer.save();
-        user.coins += 5000;
         user.referredBy = referrer._id;
         await user.save();
       }
@@ -264,9 +258,6 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
   await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
 });
-
-
-
 
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
@@ -302,3 +293,4 @@ bot.on('message', async (msg) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+ 
