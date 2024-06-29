@@ -198,12 +198,15 @@ app.get('/load-progress', async (req, res) => {
   }
 });
 
+// index.js
 bot.onText(/\/start (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const referralCode = match[1];
 
   const referrer = await UserProgress.findOne({ referralCode });
-  const username = msg.from.username || `user${chatId}`;
+  const firstName = msg.from.first_name || '';
+  const lastName = msg.from.last_name || '';
+  const displayName = `${firstName} ${lastName}`.trim();
   const profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
   // Check if the user already exists before creating
@@ -212,7 +215,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   if (!user) {
     user = new UserProgress({
       telegramId: chatId.toString(),
-      username,
+      username: displayName,  // Save display name instead of username
       profilePhotoUrl,
       referralCode: generateReferralCode(),
       referredBy: referrer ? referrer._id : null
@@ -224,7 +227,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
       if (!isAlreadyReferred) {
         referrer.referrals.push({
           telegramId: chatId.toString(),
-          username,
+          username: displayName,  // Save display name instead of username
           profilePhotoUrl
         });
         referrer.coins += 5000;
@@ -244,7 +247,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
       if (!isAlreadyReferred) {
         referrer.referrals.push({
           telegramId: chatId.toString(),
-          username,
+          username: displayName,  // Save display name instead of username
           profilePhotoUrl
         });
         referrer.coins += 5000;
@@ -261,8 +264,10 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  const username = msg.from.username || `user${chatId}`;
-  let profilePhotoUrl = await getProfilePhotoUrl(chatId);
+  const firstName = msg.from.first_name || '';
+  const lastName = msg.from.last_name || '';
+  const displayName = `${firstName} ${lastName}`.trim();
+  const profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
   // Check if the user already exists before creating
   let user = await UserProgress.findOne({ telegramId: chatId.toString() });
@@ -270,7 +275,7 @@ bot.on('message', async (msg) => {
   if (!user) {
     user = new UserProgress({
       telegramId: chatId.toString(),
-      username,
+      username: displayName,  // Save display name instead of username
       profilePhotoUrl,
       referralCode: generateReferralCode()
     });
@@ -289,6 +294,7 @@ bot.on('message', async (msg) => {
     }
   });
 });
+
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
