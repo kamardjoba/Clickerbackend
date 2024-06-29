@@ -79,7 +79,7 @@ const userProgressSchema = new mongoose.Schema({
      
   referrals: [{ // Добавляем массив рефералов
       telegramId: String,
-      username: String,
+      first_name: String,
       profilePhotoUrl: String
      }]
 });
