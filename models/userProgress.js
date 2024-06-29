@@ -7,9 +7,9 @@ const userProgressSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  username: {
+  first_name: {
     type: String,
-    required: false
+    required: true
   },
   coins: {
     type: Number,

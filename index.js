@@ -203,28 +203,26 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   const referralCode = match[1];
 
   const referrer = await UserProgress.findOne({ referralCode });
-  const username = msg.from.first_name || `user${chatId}`;
+  const firstName = msg.from.first_name || `user${chatId}`;
   const profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  // Check if the user already exists before creating
   let user = await UserProgress.findOne({ telegramId: chatId.toString() });
 
   if (!user) {
     user = new UserProgress({
       telegramId: chatId.toString(),
-      username,
+      first_name: firstName,
       profilePhotoUrl,
       referralCode: generateReferralCode(),
       referredBy: referrer ? referrer._id : null
     });
 
     if (referrer) {
-      // Check if the user is already a referral
       const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
       if (!isAlreadyReferred) {
         referrer.referrals.push({
           telegramId: chatId.toString(),
-          username,
+          first_name: firstName,
           profilePhotoUrl
         });
         referrer.coins += 5000;
@@ -239,12 +237,11 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     }
 
     if (referrer) {
-      // Check if the user is already a referral
       const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
       if (!isAlreadyReferred) {
         referrer.referrals.push({
           telegramId: chatId.toString(),
-          username,
+          first_name: firstName,
           profilePhotoUrl
         });
         referrer.coins += 5000;
@@ -261,16 +258,15 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  const username = msg.from.username || `user${chatId}`;
+  const firstName = msg.from.first_name || `user${chatId}`;
   let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  // Check if the user already exists before creating
   let user = await UserProgress.findOne({ telegramId: chatId.toString() });
 
   if (!user) {
     user = new UserProgress({
       telegramId: chatId.toString(),
-      username,
+      first_name: firstName,
       profilePhotoUrl,
       referralCode: generateReferralCode()
     });
