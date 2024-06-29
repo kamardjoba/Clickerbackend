@@ -183,7 +183,7 @@ app.get('/load-progress', async (req, res) => {
         upgradeCostEnergyTime: user.upgradeCostEnergyTime,
         valEnergyTime: user.valEnergyTime,
         time: user.time,
-        username: user.first_name,
+        first_name: user.first_name,
         profilePhotoUrl: user.profilePhotoUrl,
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
