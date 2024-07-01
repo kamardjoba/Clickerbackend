@@ -218,6 +218,9 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     });
 
     if (referrer) {
+      if (referrer.telegramId === chatId.toString()) {
+        return bot.sendMessage(chatId, `Вы не можете использовать свой собственный реферальный код.`);
+      }
       const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
       if (!isAlreadyReferred) {
         referrer.referrals.push({
@@ -237,6 +240,9 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     }
 
     if (referrer) {
+      if (referrer.telegramId === chatId.toString()) {
+        return bot.sendMessage(chatId, `Вы не можете использовать свой собственный реферальный код.`);
+      }
       const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
       if (!isAlreadyReferred) {
         referrer.referrals.push({
@@ -255,6 +261,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
   await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
 });
+
 
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
