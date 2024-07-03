@@ -13,7 +13,7 @@ const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
 const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const CHANNEL_ID = -1002202574694;
-//const CHAT_ID = -561009411; 
+const CHAT_ID = -561009411; 
 
 
 const bot = new TelegramBot(token, { polling: true });
@@ -137,10 +137,9 @@ app.post('/check-subscription', async (req, res) => {
   }
 });
 
-// index.js
-const CHAT_ID = -561009411; // Update with actual chat ID
 
-// Route to check subscription to the Telegram chat
+
+// index.js
 app.post('/check-chat-subscription', async (req, res) => {
   const { userId } = req.body;
 
@@ -176,7 +175,7 @@ app.post('/check-chat-subscription', async (req, res) => {
 
     res.json({ success: true, isSubscribed, hasCheckedChatSubscription: user.hasCheckedChatSubscription, message });
   } catch (error) {
-    console.error('Error checking chat subscription:', error);
+    console.error('Error checking chat subscription:', error.message, error.response?.data || '');
     res.status(500).json({ success: false, message: 'Error checking subscription.' });
   }
 });
