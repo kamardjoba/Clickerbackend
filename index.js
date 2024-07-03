@@ -13,7 +13,7 @@ const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
 const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const CHANNEL_ID = -1002202574694;
-const CHAT_ID = -561009411; 
+//const CHAT_ID = -561009411; 
 
 
 const bot = new TelegramBot(token, { polling: true });
@@ -137,13 +137,17 @@ app.post('/check-subscription', async (req, res) => {
   }
 });
 
+// index.js
+const CHAT_ID = -561009411; // Update with actual chat ID
+
+// Route to check subscription to the Telegram chat
 app.post('/check-chat-subscription', async (req, res) => {
   const { userId } = req.body;
 
   try {
     const user = await UserProgress.findById(userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
+      return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
     const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
@@ -159,23 +163,24 @@ app.post('/check-chat-subscription', async (req, res) => {
     let message = '';
     if (isSubscribed) {
       if (!user.hasCheckedChatSubscription) {
-        user.coins += 5000; // или любая другая награда
+        user.coins += 5000;
         user.hasCheckedChatSubscription = true;
         await user.save();
-        message = 'Вы успешно подписались на чат и получили 5000 монет!';
+        message = 'You successfully subscribed to the chat and received 5000 coins!';
       } else {
-        message = 'Вы уже проверяли подписку на чат и получили свои монеты.';
+        message = 'You have already checked the subscription and received your coins.';
       }
     } else {
-      message = 'Вы не подписаны на чат.';
+      message = 'You are not subscribed to the chat.';
     }
 
     res.json({ success: true, isSubscribed, hasCheckedChatSubscription: user.hasCheckedChatSubscription, message });
   } catch (error) {
     console.error('Error checking chat subscription:', error);
-    res.status(500).json({ success: false, message: 'Ошибка при проверке подписки на чат.' });
+    res.status(500).json({ success: false, message: 'Error checking subscription.' });
   }
 });
+
 
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;

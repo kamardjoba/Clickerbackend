@@ -78,11 +78,10 @@ const userProgressSchema = new mongoose.Schema({
      default: false 
     },
 
-  hasCheckedChatSubscription: {
-     type: Boolean,
-     default: false
-    },
-    
+   hasCheckedChatSubscription: {
+       type: Boolean,
+       default: false
+       },
      
   referrals: [{ // Добавляем массив рефералов
       telegramId: String,
