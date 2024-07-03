@@ -13,6 +13,8 @@ const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
 const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const CHANNEL_ID = -1002202574694;
+const CHAT_ID = -561009411; 
+
 
 const bot = new TelegramBot(token, { polling: true });
 
@@ -135,7 +137,45 @@ app.post('/check-subscription', async (req, res) => {
   }
 });
 
+app.post('/check-chat-subscription', async (req, res) => {
+  const { userId } = req.body;
 
+  try {
+    const user = await UserProgress.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
+    }
+
+    const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
+      params: {
+        chat_id: CHAT_ID,
+        user_id: user.telegramId
+      }
+    });
+
+    const status = chatMemberResponse.data.result.status;
+    const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
+
+    let message = '';
+    if (isSubscribed) {
+      if (!user.hasCheckedChatSubscription) {
+        user.coins += 5000; // или любая другая награда
+        user.hasCheckedChatSubscription = true;
+        await user.save();
+        message = 'Вы успешно подписались на чат и получили 5000 монет!';
+      } else {
+        message = 'Вы уже проверяли подписку на чат и получили свои монеты.';
+      }
+    } else {
+      message = 'Вы не подписаны на чат.';
+    }
+
+    res.json({ success: true, isSubscribed, hasCheckedChatSubscription: user.hasCheckedChatSubscription, message });
+  } catch (error) {
+    console.error('Error checking chat subscription:', error);
+    res.status(500).json({ success: false, message: 'Ошибка при проверке подписки на чат.' });
+  }
+});
 
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
