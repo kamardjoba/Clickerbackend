@@ -241,18 +241,24 @@ app.get('/load-progress', async (req, res) => {
 });
 
 bot.onText(/\/start (.+)/, async (msg, match) => {
-  const chatId = msg.from.id;
+  const userId = msg.from.id; // Используем ID пользователя
+  const chatId = msg.chat.id; // ID чата
   const referralCode = match[1];
 
-  const referrer = await UserProgress.findOne({ referralCode });
-  const firstName = msg.from.first_name || `user${chatId}`;
-  const profilePhotoUrl = await getProfilePhotoUrl(chatId);
+  // Проверка, чтобы не создавать пользователя с ID чата
+  if (userId === chatId) {
+    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
+  }
 
-  let user = await UserProgress.findOne({ telegramId: chatId.toString() });
+  const referrer = await UserProgress.findOne({ referralCode });
+  const firstName = msg.from.first_name || `user${userId}`;
+  const profilePhotoUrl = await getProfilePhotoUrl(userId);
+
+  let user = await UserProgress.findOne({ telegramId: userId.toString() });
 
   if (!user) {
     user = new UserProgress({
-      telegramId: chatId.toString(),
+      telegramId: userId.toString(),
       first_name: firstName,
       profilePhotoUrl,
       referralCode: generateReferralCode(),
@@ -260,13 +266,13 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     });
 
     if (referrer) {
-      if (referrer.telegramId === chatId.toString()) {
-        return bot.sendMessage(chatId, `Вы не можете использовать свой собственный реферальный код.`);
+      if (referrer.telegramId === userId.toString()) {
+        return bot.sendMessage(userId, `Вы не можете использовать свой собственный реферальный код.`);
       }
-      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
+      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === userId.toString());
       if (!isAlreadyReferred) {
         referrer.referrals.push({
-          telegramId: chatId.toString(),
+          telegramId: userId.toString(),
           first_name: firstName,
           profilePhotoUrl
         });
@@ -278,17 +284,17 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     await user.save();
   } else {
     if (user.referredBy) {
-      return bot.sendMessage(chatId, `Вы уже зарегистрированы по реферальной ссылке.`);
+      return bot.sendMessage(userId, `Вы уже зарегистрированы по реферальной ссылке.`);
     }
 
     if (referrer) {
-      if (referrer.telegramId === chatId.toString()) {
-        return bot.sendMessage(chatId, `Вы не можете использовать свой собственный реферальный код.`);
+      if (referrer.telegramId === userId.toString()) {
+        return bot.sendMessage(userId, `Вы не можете использовать свой собственный реферальный код.`);
       }
-      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === chatId.toString());
+      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === userId.toString());
       if (!isAlreadyReferred) {
         referrer.referrals.push({
-          telegramId: chatId.toString(),
+          telegramId: userId.toString(),
           first_name: firstName,
           profilePhotoUrl
         });
@@ -301,38 +307,32 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   }
 
   await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
-  await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
+  await bot.sendMessage(userId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
 });
 
+
 bot.on('message', async (msg) => {
-  const userId = msg.from.id; // Используем ID пользователя
-  const chatId = msg.chat.id; // ID чата
+  const chatId = msg.chat.id;
+  const firstName = msg.from.first_name || `user${chatId}`;
+  let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  // Проверка, чтобы не создавать пользователя с ID чата
-  if (userId === chatId) {
-    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
-  }
-
-  const firstName = msg.from.first_name || `user${userId}`;
-  let profilePhotoUrl = await getProfilePhotoUrl(userId);
-
-  let user = await UserProgress.findOne({ telegramId: userId.toString() });
+  let user = await UserProgress.findOne({ telegramId: chatId.toString() });
 
   if (!user) {
     user = new UserProgress({
-      telegramId: userId.toString(),
+      telegramId: chatId.toString(),
       first_name: firstName,
       profilePhotoUrl,
       referralCode: generateReferralCode()
     });
     await user.save();
   } else {
-    await updateProfilePhoto(userId);
+    await updateProfilePhoto(chatId);
   }
 
   const telegramLink = generateTelegramLink(user.referralCode);
 
-  await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+  await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
     reply_markup: {
       inline_keyboard: [
         [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
@@ -340,7 +340,6 @@ bot.on('message', async (msg) => {
     }
   });
 });
-
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
