@@ -246,7 +246,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   const referralCode = match[1];
 
   // Проверка, чтобы не создавать пользователя с ID чата
-  if (userId === chatId) {
+  if (userId === chatId.toString()) {
     return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
   }
 
@@ -311,28 +311,36 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
 });
 
 
-bot.on('message', async (msg) => {
-  const chatId = msg.chat.id;
-  const firstName = msg.from.first_name || `user${chatId}`;
-  let profilePhotoUrl = await getProfilePhotoUrl(chatId);
 
-  let user = await UserProgress.findOne({ telegramId: chatId.toString() });
+bot.on('message', async (msg) => {
+  const userId = msg.from.id; // Используем ID пользователя
+  const chatId = msg.chat.id; // ID чата
+
+  // Проверка, чтобы не создавать пользователя с ID чата
+  if (userId === chatId.toString()) {
+    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
+  }
+
+  const firstName = msg.from.first_name || `user${userId}`;
+  let profilePhotoUrl = await getProfilePhotoUrl(userId);
+
+  let user = await UserProgress.findOne({ telegramId: userId.toString() });
 
   if (!user) {
     user = new UserProgress({
-      telegramId: chatId.toString(),
+      telegramId: userId.toString(),
       first_name: firstName,
       profilePhotoUrl,
       referralCode: generateReferralCode()
     });
     await user.save();
   } else {
-    await updateProfilePhoto(chatId);
+    await updateProfilePhoto(userId);
   }
 
   const telegramLink = generateTelegramLink(user.referralCode);
 
-  await bot.sendMessage(chatId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+  await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
     reply_markup: {
       inline_keyboard: [
         [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
@@ -340,6 +348,7 @@ bot.on('message', async (msg) => {
     }
   });
 });
+
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
