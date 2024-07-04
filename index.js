@@ -343,6 +343,15 @@ bot.on('message', async (msg) => {
   }
 });
 
+function generateReferralCode() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function generateTelegramLink(referralCode) {
+  return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
+}
+
+bot.on("polling_error", (err) => console.log(err));
 
 
 
