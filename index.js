@@ -186,42 +186,6 @@ app.post('/check-chat-subscription', async (req, res) => {
   }
 });
 
-const userId = msg.from.id; // Используем ID пользователя
-const chatId = msg.chat.id; // ID чата
-
-// Проверка, чтобы не создавать пользователя с ID чата
-if (userId === chatId.toString()) {
-  return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
-}
-
-const firstName = msg.from.first_name || `user${userId}`;
-const profilePhotoUrl = await getProfilePhotoUrl(userId);
-
-// Проверяем, существует ли пользователь
-let user = await UserProgress.findOne({ telegramId: userId.toString() });
-
-if (!user) {
-  // Если пользователь не существует, создаем нового
-  user = new UserProgress({
-    telegramId: userId.toString(),
-    first_name: firstName,
-    profilePhotoUrl,
-    referralCode: generateReferralCode()
-  });
-  try {
-    await user.save();
-  } catch (error) {
-    if (error.code === 11000) {
-      return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
-    } else {
-      throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
-    }
-  }
-} else {
-  // Если пользователь существует, обновляем его профильное фото
-  await updateProfilePhoto(userId);
-}
-
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
 
@@ -378,7 +342,15 @@ bot.on('message', async (msg) => {
       profilePhotoUrl,
       referralCode: generateReferralCode()
     });
-    await user.save();
+    try {
+      await user.save();
+    } catch (error) {
+      if (error.code === 11000) {
+        return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
+      } else {
+        throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
+      }
+    }
   } else {
     await updateProfilePhoto(userId);
   }
@@ -398,3 +370,22 @@ bot.on('message', async (msg) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+
+
+if (!user) {
+  user = new UserProgress({
+    telegramId: userId.toString(),
+    first_name: firstName,
+    profilePhotoUrl,
+    referralCode: generateReferralCode()
+  });
+  try {
+    await user.save();
+  } catch (error) {
+    if (error.code === 11000) {
+      return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
+    } else {
+      throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
+    }
+  }
+}
