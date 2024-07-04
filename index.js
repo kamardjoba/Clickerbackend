@@ -306,51 +306,6 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   }
 });
 
-bot.on('message', async (msg) => {
-  const userId = msg.from.id;
-  const chatId = msg.chat.id;
-
-  console.log('Received message from user:', userId, 'in chat:', chatId);
-
-  if (!userId || !chatId) {
-    console.error('Error: userId or chatId is missing');
-    return;
-  }
-
-  // Проверка, чтобы не создавать пользователя с ID чата
-  if (userId === chatId.toString()) {
-    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
-  }
-
-  const firstName = msg.from.first_name || `user${userId}`;
-  const profilePhotoUrl = await getProfilePhotoUrl(userId);
-
-  try {
-    let user = await UserProgress.findOneAndUpdate(
-      { telegramId: userId.toString() },
-      {
-        telegramId: userId.toString(),
-        first_name: firstName,
-        profilePhotoUrl,
-        referralCode: generateReferralCode()
-      },
-      { upsert: true, new: true }
-    );
-
-    const telegramLink = generateTelegramLink(user.referralCode);
-    await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-        ]
-      }
-    });
-  } catch (error) {
-    console.error('Error in message handler:', error);
-    bot.sendMessage(userId, `Произошла ошибка при обработке вашего сообщения.`);
-  }
-});
-
 function generateReferralCode() {
   return Math.random().toString(36).substr(2, 9);
 }
