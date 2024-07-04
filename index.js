@@ -257,13 +257,18 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
   }
 
+  let user = await UserProgress.findOne({ telegramId: userId.toString() });
+  
+  // Проверяем, использует ли пользователь свою собственную реферальную ссылку
+  if (user && user.referralCode === referralCode) {
+    return bot.sendMessage(userId, `Вы не можете использовать свою собственную реферальную ссылку.`);
+  }
+
   const referrer = await UserProgress.findOne({ referralCode });
   const firstName = msg.from.first_name || `user${userId}`;
   const profilePhotoUrl = await getProfilePhotoUrl(userId);
 
   try {
-    let user = await UserProgress.findOne({ telegramId: userId.toString() });
-
     if (!user) {
       user = new UserProgress({
         telegramId: userId.toString(),
@@ -305,6 +310,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     }
   }
 });
+
 
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
