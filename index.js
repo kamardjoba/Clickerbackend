@@ -342,15 +342,7 @@ bot.on('message', async (msg) => {
       profilePhotoUrl,
       referralCode: generateReferralCode()
     });
-    try {
-      await user.save();
-    } catch (error) {
-      if (error.code === 11000) {
-        return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
-      } else {
-        throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
-      }
-    }
+    await user.save();
   } else {
     await updateProfilePhoto(userId);
   }
@@ -372,3 +364,20 @@ app.listen(port, () => {
 });
 
 
+// if (!user) {
+//   user = new UserProgress({
+//     telegramId: userId.toString(),
+//     first_name: firstName,
+//     profilePhotoUrl,
+//     referralCode: generateReferralCode()
+//   });
+//   try {
+//     await user.save();
+//   } catch (error) {
+//     if (error.code === 11000) {
+//       return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
+//     } else {
+//       throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
+//     }
+//   }
+// }
