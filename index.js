@@ -241,74 +241,76 @@ app.get('/load-progress', async (req, res) => {
 });
 
 bot.onText(/\/start (.+)/, async (msg, match) => {
-  const userId = msg.from.id; // Используем ID пользователя
-  const chatId = msg.chat.id; // ID чата
+  const userId = msg.from.id;
   const referralCode = match[1];
-
-  // Проверка, чтобы не создавать пользователя с ID чата
-  if (userId === chatId.toString()) {
-    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
-  }
-
   const referrer = await UserProgress.findOne({ referralCode });
   const firstName = msg.from.first_name || `user${userId}`;
   const profilePhotoUrl = await getProfilePhotoUrl(userId);
 
-  let user = await UserProgress.findOne({ telegramId: userId.toString() });
+  try {
+    let user = await UserProgress.findOneAndUpdate(
+      { telegramId: userId.toString() },
+      {
+        telegramId: userId.toString(),
+        first_name: firstName,
+        profilePhotoUrl,
+        referralCode: generateReferralCode(),
+        referredBy: referrer ? referrer._id : null
+      },
+      { upsert: true, new: true }
+    );
 
-  if (!user) {
-    user = new UserProgress({
-      telegramId: userId.toString(),
-      first_name: firstName,
-      profilePhotoUrl,
-      referralCode: generateReferralCode(),
-      referredBy: referrer ? referrer._id : null
-    });
-
-    if (referrer) {
-      if (referrer.telegramId === userId.toString()) {
-        return bot.sendMessage(userId, `Вы не можете использовать свой собственный реферальный код.`);
-      }
-      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === userId.toString());
-      if (!isAlreadyReferred) {
-        referrer.referrals.push({
-          telegramId: userId.toString(),
-          first_name: firstName,
-          profilePhotoUrl
-        });
-        referrer.coins += 5000;
-        await referrer.save();
-        user.coins += 5000;
-      }
-    }
-    await user.save();
-  } else {
-    if (user.referredBy) {
-      return bot.sendMessage(userId, `Вы уже зарегистрированы по реферальной ссылке.`);
+    if (referrer && !referrer.referrals.some(ref => ref.telegramId === userId.toString())) {
+      referrer.referrals.push({
+        telegramId: userId.toString(),
+        first_name: firstName,
+        profilePhotoUrl
+      });
+      referrer.coins += 5000;
+      await referrer.save();
+      user.coins += 5000;
+      await user.save();
     }
 
-    if (referrer) {
-      if (referrer.telegramId === userId.toString()) {
-        return bot.sendMessage(userId, `Вы не можете использовать свой собственный реферальный код.`);
-      }
-      const isAlreadyReferred = referrer.referrals.some(referral => referral.telegramId === userId.toString());
-      if (!isAlreadyReferred) {
-        referrer.referrals.push({
-          telegramId: userId.toString(),
-          first_name: firstName,
-          profilePhotoUrl
-        });
-        referrer.coins += 5000;
-        await referrer.save();
-        user.referredBy = referrer._id;
-        await user.save();
-      }
-    }
+    bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
+    bot.sendMessage(userId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
+  } catch (error) {
+    console.error('Error in /start command:', error);
+    bot.sendMessage(userId, `Произошла ошибка при обработке вашей регистрации.`);
   }
-
-  await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
-  await bot.sendMessage(userId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
 });
+
+bot.on('message', async (msg) => {
+  const userId = msg.from.id;
+  const firstName = msg.from.first_name || `user${userId}`;
+  const profilePhotoUrl = await getProfilePhotoUrl(userId);
+
+  try {
+    let user = await UserProgress.findOneAndUpdate(
+      { telegramId: userId.toString() },
+      {
+        telegramId: userId.toString(),
+        first_name: firstName,
+        profilePhotoUrl,
+        referralCode: generateReferralCode()
+      },
+      { upsert: true, new: true }
+    );
+
+    const telegramLink = generateTelegramLink(user.referralCode);
+    bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+        ]
+      }
+    });
+  } catch (error) {
+    console.error('Error in message handler:', error);
+    bot.sendMessage(userId, `Произошла ошибка при обработке вашего сообщения.`);
+  }
+});
+
 
 
 
