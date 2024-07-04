@@ -137,9 +137,6 @@ app.post('/check-subscription', async (req, res) => {
   }
 });
 
-
-
-// index.js
 app.post('/check-chat-subscription', async (req, res) => {
   const { userId } = req.body;
 
@@ -179,7 +176,6 @@ app.post('/check-chat-subscription', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error checking subscription.' });
   }
 });
-
 
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
@@ -308,7 +304,6 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   await bot.sendMessage(chatId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
 });
 
-
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const firstName = msg.from.first_name || `user${chatId}`;
@@ -342,4 +337,3 @@ bot.on('message', async (msg) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
- 
