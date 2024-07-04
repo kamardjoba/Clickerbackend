@@ -242,7 +242,21 @@ app.get('/load-progress', async (req, res) => {
 
 bot.onText(/\/start (.+)/, async (msg, match) => {
   const userId = msg.from.id;
+  const chatId = msg.chat.id;
   const referralCode = match[1];
+
+  console.log('Received /start command from user:', userId, 'in chat:', chatId);
+
+  if (!userId || !chatId) {
+    console.error('Error: userId or chatId is missing');
+    return;
+  }
+
+  // Проверка, чтобы не создавать пользователя с ID чата
+  if (userId === chatId.toString()) {
+    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
+  }
+
   const referrer = await UserProgress.findOne({ referralCode });
   const firstName = msg.from.first_name || `user${userId}`;
   const profilePhotoUrl = await getProfilePhotoUrl(userId);
@@ -272,16 +286,34 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
       await user.save();
     }
 
-    bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
-    bot.sendMessage(userId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
+    await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
+    await bot.sendMessage(userId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
   } catch (error) {
-    console.error('Error in /start command:', error);
-    bot.sendMessage(userId, `Произошла ошибка при обработке вашей регистрации.`);
+    if (error.code === 11000) {
+      return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
+    } else {
+      console.error('Error in /start command:', error);
+      throw error;
+    }
   }
 });
 
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
+  const chatId = msg.chat.id;
+
+  console.log('Received message from user:', userId, 'in chat:', chatId);
+
+  if (!userId || !chatId) {
+    console.error('Error: userId or chatId is missing');
+    return;
+  }
+
+  // Проверка, чтобы не создавать пользователя с ID чата
+  if (userId === chatId.toString()) {
+    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
+  }
+
   const firstName = msg.from.first_name || `user${userId}`;
   const profilePhotoUrl = await getProfilePhotoUrl(userId);
 
@@ -298,7 +330,7 @@ bot.on('message', async (msg) => {
     );
 
     const telegramLink = generateTelegramLink(user.referralCode);
-    bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+    await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
       reply_markup: {
         inline_keyboard: [
           [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
@@ -310,6 +342,7 @@ bot.on('message', async (msg) => {
     bot.sendMessage(userId, `Произошла ошибка при обработке вашего сообщения.`);
   }
 });
+
 
 
 
