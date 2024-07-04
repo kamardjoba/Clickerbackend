@@ -241,7 +241,7 @@ app.get('/load-progress', async (req, res) => {
 });
 
 bot.onText(/\/start (.+)/, async (msg, match) => {
-  const chatId = msg.chat.id;
+  const chatId = msg.from.id;
   const referralCode = match[1];
 
   const referrer = await UserProgress.findOne({ referralCode });
