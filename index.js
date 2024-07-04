@@ -262,32 +262,40 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   const profilePhotoUrl = await getProfilePhotoUrl(userId);
 
   try {
-    let user = await UserProgress.findOneAndUpdate(
-      { telegramId: userId.toString() },
-      {
+    let user = await UserProgress.findOne({ telegramId: userId.toString() });
+
+    if (!user) {
+      user = new UserProgress({
         telegramId: userId.toString(),
         first_name: firstName,
         profilePhotoUrl,
         referralCode: generateReferralCode(),
         referredBy: referrer ? referrer._id : null
-      },
-      { upsert: true, new: true }
-    );
-
-    if (referrer && !referrer.referrals.some(ref => ref.telegramId === userId.toString())) {
-      referrer.referrals.push({
-        telegramId: userId.toString(),
-        first_name: firstName,
-        profilePhotoUrl
       });
-      referrer.coins += 5000;
-      await referrer.save();
-      user.coins += 5000;
+
+      if (referrer && !referrer.referrals.some(ref => ref.telegramId === userId.toString())) {
+        referrer.referrals.push({
+          telegramId: userId.toString(),
+          first_name: firstName,
+          profilePhotoUrl
+        });
+        referrer.coins += 5000;
+        await referrer.save();
+        user.coins += 5000;
+      }
       await user.save();
+    } else {
+      console.log('User already exists with telegramId:', userId);
     }
 
-    await bot.sendMessage(referrer?.telegramId, `Ваш друг присоединился по вашему реферальному коду! Вам начислено 5000 монет.`);
-    await bot.sendMessage(userId, `Вы успешно присоединились по реферальному коду! Вам начислено 5000 монет.`);
+    const telegramLink = generateTelegramLink(user.referralCode);
+    await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+        ]
+      }
+    });
   } catch (error) {
     if (error.code === 11000) {
       return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
@@ -406,20 +414,3 @@ app.listen(port, () => {
 });
 
 
-// if (!user) {
-//   user = new UserProgress({
-//     telegramId: userId.toString(),
-//     first_name: firstName,
-//     profilePhotoUrl,
-//     referralCode: generateReferralCode()
-//   });
-//   try {
-//     await user.save();
-//   } catch (error) {
-//     if (error.code === 11000) {
-//       return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
-//     } else {
-//       throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
-//     }
-//   }
-// }
