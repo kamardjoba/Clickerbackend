@@ -1,12 +1,12 @@
 // index.js
-import express, { json } from 'express';
-import { connect } from 'mongoose';
-import cors from 'cors';
-import { json as _json } from 'body-parser';
-import TelegramBot from 'node-telegram-bot-api';
-import { get } from 'axios';
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const TelegramBot = require('node-telegram-bot-api');
+const axios = require('axios');
 require('dotenv').config();
-import UserProgress, { findOneAndUpdate, findById, findOne } from './models/userProgress';
+const UserProgress = require('./models/userProgress');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -22,10 +22,10 @@ const telegramLink = generateTelegramLink(user.referralCode);
 
 
 app.use(cors());
-app.use(_json());
-app.use(json());
+app.use(bodyParser.json());
+app.use(express.json());
 
-connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log(err));
 
@@ -39,7 +39,7 @@ function generateTelegramLink(referralCode) {
 
 async function getProfilePhotoUrl(telegramId) {
   try {
-    const response = await get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
+    const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
       params: {
         user_id: telegramId,
         limit: 1
@@ -48,7 +48,7 @@ async function getProfilePhotoUrl(telegramId) {
 
     if (response.data.ok && response.data.result.photos.length > 0) {
       const fileId = response.data.result.photos[0][0].file_id;
-      const fileResponse = await get(`https://api.telegram.org/bot${token}/getFile`, {
+      const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
         params: {
           file_id: fileId
         }
@@ -84,7 +84,7 @@ async function updateProfilePhoto(telegramId) {
   try {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
     if (profilePhotoUrl) {
-      const updatedUser = await findOneAndUpdate(
+      const updatedUser = await UserProgress.findOneAndUpdate(
           { telegramId },
           { profilePhotoUrl },
           { new: true }
@@ -104,12 +104,12 @@ app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
 
   try {
-    const user = await findById(userId);
+    const user = await UserProgress.findById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
     }
 
-    const chatMemberResponse = await get(`https://api.telegram.org/bot${token}/getChatMember`, {
+    const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
       params: {
         chat_id: CHANNEL_ID,
         user_id: user.telegramId
@@ -144,12 +144,12 @@ app.post('/check-chat-subscription', async (req, res) => {
   const { userId } = req.body;
 
   try {
-    const user = await findById(userId);
+    const user = await UserProgress.findById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
 
-    const chatMemberResponse = await get(`https://api.telegram.org/bot${token}/getChatMember`, {
+    const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
       params: {
         chat_id: CHAT_ID,
         user_id: user.telegramId
@@ -184,7 +184,7 @@ app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
 
   try {
-    const user = await findById(userId);
+    const user = await UserProgress.findById(userId);
     if (user) {
       user.coins = coins;
       user.upgradeCost = upgradeCost;
@@ -212,7 +212,7 @@ app.get('/load-progress', async (req, res) => {
   const userId = req.query.userId;
 
   try {
-    const user = await findById(userId);
+    const user = await UserProgress.findById(userId);
     if (user) {
       await updateProfilePhoto(user.telegramId);
       res.json({
@@ -253,11 +253,11 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
   }
 
-  const referrer = await findOne({ referralCode });
+  const referrer = await UserProgress.findOne({ referralCode });
   const firstName = msg.from.first_name || `user${userId}`;
   const profilePhotoUrl = await getProfilePhotoUrl(userId);
 
-  let user = await findOne({ telegramId: userId.toString() });
+  let user = await UserProgress.findOne({ telegramId: userId.toString() });
 
   if (!user) {
     user = new UserProgress({
@@ -327,7 +327,7 @@ bot.on('message', async (msg) => {
   const firstName = msg.from.first_name || `user${userId}`;
   let profilePhotoUrl = await getProfilePhotoUrl(userId);
 
-  let user = await findOne({ telegramId: userId.toString() });
+  let user = await UserProgress.findOne({ telegramId: userId.toString() });
 
   if (!user) {
     user = new UserProgress({
