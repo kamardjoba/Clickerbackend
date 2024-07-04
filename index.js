@@ -19,13 +19,7 @@ const CHAT_ID = -1002177922862;
 const bot = new TelegramBot(token, { polling: true });
 const telegramLink = generateTelegramLink(user.referralCode);
 
-await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
-  reply_markup: {
-    inline_keyboard: [
-      [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-    ]
-  }
-});
+
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -342,7 +336,15 @@ bot.on('message', async (msg) => {
       profilePhotoUrl,
       referralCode: generateReferralCode()
     });
-    await user.save();
+    try {
+          await user.save();
+        } catch (error) {
+          if (error.code === 11000) {
+            return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
+          } else {
+            throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
+          }
+        }
   } else {
     await updateProfilePhoto(userId);
   }
