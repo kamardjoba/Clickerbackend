@@ -17,9 +17,6 @@ const CHAT_ID = -1002177922862;
 
 
 const bot = new TelegramBot(token, { polling: true });
-const telegramLink = generateTelegramLink(user.referralCode);
-
-
 
 app.use(cors());
 app.use(bodyParser.json());
