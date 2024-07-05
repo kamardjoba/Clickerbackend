@@ -113,6 +113,7 @@ app.post('/check-subscription', async (req, res) => {
       }
     });
 
+    
     const status = chatMemberResponse.data.result.status;
     const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
 
