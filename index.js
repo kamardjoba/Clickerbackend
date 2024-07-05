@@ -97,6 +97,27 @@ async function updateProfilePhoto(telegramId) {
   }
 }
 
+// index.js (backend)
+app.post('/update-profile-photos', async (req, res) => {
+  const { telegramIds } = req.body;
+
+  try {
+    const updatedProfiles = await Promise.all(telegramIds.map(async (telegramId) => {
+      const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
+      return {
+        telegramId,
+        profilePhotoUrl
+      };
+    }));
+
+    res.json({ success: true, updatedProfiles });
+  } catch (error) {
+    console.error('Error updating profile photos:', error);
+    res.status(500).json({ success: false, message: 'Error updating profile photos.' });
+  }
+});
+
+
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
 
@@ -113,7 +134,7 @@ app.post('/check-subscription', async (req, res) => {
       }
     });
 
-    
+
     const status = chatMemberResponse.data.result.status;
     const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
 
@@ -177,6 +198,8 @@ app.post('/check-chat-subscription', async (req, res) => {
     res.status(500).json({ success: false, message: 'Error checking subscription.' });
   }
 });
+
+
 
 
 app.post('/save-progress', async (req, res) => {
