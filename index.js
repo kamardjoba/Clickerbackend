@@ -5,9 +5,6 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 require('dotenv').config();
 const UserProgress = require('./models/userProgress');
 
@@ -37,17 +34,6 @@ function generateTelegramLink(referralCode) {
   return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
-
-const upload = multer({ storage: storage });
-
 async function getProfilePhotoUrl(telegramId) {
   try {
     const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
@@ -67,19 +53,7 @@ async function getProfilePhotoUrl(telegramId) {
 
       if (fileResponse.data.ok) {
         const filePath = fileResponse.data.result.file_path;
-        const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-
-        // Скачивание и сохранение фото
-        const photoResponse = await axios.get(fileUrl, { responseType: 'stream' });
-        const localFilePath = path.join(__dirname, 'uploads', `${telegramId}.jpg`);
-        const writer = fs.createWriteStream(localFilePath);
-
-        photoResponse.data.pipe(writer);
-
-        return new Promise((resolve, reject) => {
-          writer.on('finish', () => resolve(`/uploads/${telegramId}.jpg`));
-          writer.on('error', reject);
-        });
+        return `https://api.telegram.org/file/bot${token}/${filePath}`;
       } else {
         console.error('Ошибка при получении файла:', fileResponse.data);
         return '';
@@ -108,21 +82,20 @@ async function updateProfilePhoto(telegramId) {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
     if (profilePhotoUrl) {
       const updatedUser = await UserProgress.findOneAndUpdate(
-        { telegramId },
-        { profilePhotoUrl },
-        { new: true }
+          { telegramId },
+          { profilePhotoUrl },
+          { new: true }
       );
       if (!updatedUser) {
-        console.error('Пользователь не найден для обновления фото профиля:', telegramId);
+        console.error('User not found for updating profile photo:', telegramId);
       }
     } else {
-      console.warn('URL фото профиля не возвращен для пользователя:', telegramId);
+      console.warn('No profile photo URL returned for user:', telegramId);
     }
   } catch (error) {
-    console.error('Ошибка при обновлении фото профиля:', error.message);
+    console.error('Error updating profile photo:', error.message);
   }
 }
-
 
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
@@ -273,10 +246,10 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const referralCode = match[1];
 
-  console.log('Получена команда /start от пользователя:', userId, 'в чате:', chatId);
+  console.log('Received /start command from user:', userId, 'in chat:', chatId);
 
   if (!userId || !chatId) {
-    console.error('Ошибка: отсутствует userId или chatId');
+    console.error('Error: userId or chatId is missing');
     return;
   }
 
@@ -318,7 +291,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
       }
       await user.save();
     } else {
-      console.log('Пользователь уже существует с telegramId:', userId);
+      console.log('User already exists with telegramId:', userId);
     }
 
     const telegramLink = generateTelegramLink(user.referralCode);
@@ -333,37 +306,12 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     if (error.code === 11000) {
       return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
     } else {
-      console.error('Ошибка в команде /start:', error);
+      console.error('Error in /start command:', error);
       throw error;
     }
   }
 });
 
-bot.on('photo', async (msg) => {
-  const userId = msg.from.id;
-  const chatId = msg.chat.id;
-
-  const fileId = msg.photo[msg.photo.length - 1].file_id;
-  const filePath = await bot.getFileLink(fileId);
-
-  const response = await axios.get(filePath, { responseType: 'stream' });
-  const localFilePath = path.join(__dirname, 'uploads', `${userId}.jpg`);
-  const writer = fs.createWriteStream(localFilePath);
-
-  response.data.pipe(writer);
-
-  writer.on('finish', async () => {
-    const fileUrl = `/uploads/${userId}.jpg`;
-    await UserProgress.findOneAndUpdate(
-      { telegramId: userId.toString() },
-      { profilePhotoUrl: fileUrl }
-    );
-  });
-
-  writer.on('error', (error) => {
-    console.error('Ошибка при сохранении фото:', error.message);
-  });
-});
 
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
