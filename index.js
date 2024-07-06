@@ -14,7 +14,9 @@ const token = process.env.TOKEN;
 const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const CHANNEL_ID = -1002202574694;
 const CHAT_ID = -1002177922862; 
-
+const { uploadFile } = require('./googleDrive');
+const path = require('path');
+const fs = require('fs');
 
 const bot = new TelegramBot(token, { polling: true });
 
@@ -33,6 +35,7 @@ function generateReferralCode() {
 function generateTelegramLink(referralCode) {
   return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
+
 
 async function getProfilePhotoUrl(telegramId) {
   try {
@@ -53,7 +56,31 @@ async function getProfilePhotoUrl(telegramId) {
 
       if (fileResponse.data.ok) {
         const filePath = fileResponse.data.result.file_path;
-        return `https://api.telegram.org/file/bot${token}/${filePath}`;
+        const photoUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+
+        // Сохранение фото в локальную директорию
+        const localFilePath = path.join(__dirname, 'temp', `${telegramId}.jpg`);
+        const writer = fs.createWriteStream(localFilePath);
+        const response = await axios({
+          url: photoUrl,
+          method: 'GET',
+          responseType: 'stream',
+        });
+        response.data.pipe(writer);
+
+        // Ждем завершения записи файла
+        await new Promise((resolve, reject) => {
+          writer.on('finish', resolve);
+          writer.on('error', reject);
+        });
+
+        // Загрузка фото в Google Drive
+        const uploadResponse = await uploadFile(localFilePath, `${telegramId}.jpg`);
+
+        // Удаление локального файла после загрузки
+        fs.unlinkSync(localFilePath);
+
+        return uploadResponse.webContentLink;
       } else {
         console.error('Ошибка при получении файла:', fileResponse.data);
         return '';
@@ -77,14 +104,15 @@ async function getProfilePhotoUrl(telegramId) {
   }
 }
 
+
 async function updateProfilePhoto(telegramId) {
   try {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
     if (profilePhotoUrl) {
       const updatedUser = await UserProgress.findOneAndUpdate(
-          { telegramId },
-          { profilePhotoUrl },
-          { new: true }
+        { telegramId },
+        { profilePhotoUrl },
+        { new: true }
       );
       if (!updatedUser) {
         console.error('User not found for updating profile photo:', telegramId);
@@ -96,6 +124,7 @@ async function updateProfilePhoto(telegramId) {
     console.error('Error updating profile photo:', error.message);
   }
 }
+
 
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;

@@ -1,4 +1,3 @@
-// userProgress.js
 const mongoose = require('mongoose');
 
 const userProgressSchema = new mongoose.Schema({
@@ -68,28 +67,13 @@ const userProgressSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  referralCode: { 
-    type: String,
-     unique: true
-     },
-  
-  hasCheckedSubscription: {
-     type: Boolean, 
-     default: false 
-    },
-
-   hasCheckedChatSubscription: {
-       type: Boolean,
-       default: false
-       },
-     
-  referrals: [{ // Добавляем массив рефералов
-      telegramId: String,
-      first_name: String,
-      profilePhotoUrl: String
-     }]
+  referrals: [{
+    telegramId: String,
+    first_name: String,
+    profilePhotoUrl: String
+  }]
 });
 
-const UserProgress = mongoose.model('User5Progresprogres', userProgressSchema);
+const UserProgress = mongoose.model('User6Progresprogres', userProgressSchema);
 
 module.exports = UserProgress;
