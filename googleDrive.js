@@ -6,7 +6,7 @@ const path = require('path');
 const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 const TOKEN_PATH = 'token.json';
 
-const credentials = require('./credentials.json');
+const credentials = require(path.join(__dirname, 'credentials.json'));
 const { client_secret, client_id, redirect_uris } = credentials.installed;
 const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
 
