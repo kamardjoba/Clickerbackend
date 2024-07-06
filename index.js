@@ -104,26 +104,25 @@ async function getProfilePhotoUrl(telegramId) {
 }
 
 async function updateProfilePhoto(telegramId) {
-  async function updateProfilePhoto(telegramId) {
-    try {
-      const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
-      if (profilePhotoUrl) {
-        const updatedUser = await UserProgress.findOneAndUpdate(
-          { telegramId },
-          { profilePhotoUrl },
-          { new: true }
-        );
-        if (!updatedUser) {
-          console.error('Пользователь не найден для обновления фото профиля:', telegramId);
-        }
-      } else {
-        console.warn('URL фото профиля не возвращен для пользователя:', telegramId);
+  try {
+    const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
+    if (profilePhotoUrl) {
+      const updatedUser = await UserProgress.findOneAndUpdate(
+        { telegramId },
+        { profilePhotoUrl },
+        { new: true }
+      );
+      if (!updatedUser) {
+        console.error('Пользователь не найден для обновления фото профиля:', telegramId);
       }
-    } catch (error) {
-      console.error('Ошибка при обновлении фото профиля:', error.message);
+    } else {
+      console.warn('URL фото профиля не возвращен для пользователя:', telegramId);
     }
+  } catch (error) {
+    console.error('Ошибка при обновлении фото профиля:', error.message);
   }
-  
+}
+
 
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
