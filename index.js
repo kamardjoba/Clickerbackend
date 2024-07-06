@@ -5,6 +5,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const multer = require('multer');
+const path = require('path');
 require('dotenv').config();
 const UserProgress = require('./models/userProgress');
 
@@ -34,6 +36,17 @@ function generateTelegramLink(referralCode) {
   return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
 
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
+
+const upload = multer({ storage: storage });
+
 async function getProfilePhotoUrl(telegramId) {
   try {
     const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
@@ -53,7 +66,19 @@ async function getProfilePhotoUrl(telegramId) {
 
       if (fileResponse.data.ok) {
         const filePath = fileResponse.data.result.file_path;
-        return `https://api.telegram.org/file/bot${token}/${filePath}`;
+        const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+
+        // Скачиваем и сохраняем фото
+        const photoResponse = await axios.get(fileUrl, { responseType: 'stream' });
+        const localFilePath = path.join(__dirname, 'uploads', `${telegramId}.jpg`);
+        const writer = fs.createWriteStream(localFilePath);
+
+        photoResponse.data.pipe(writer);
+
+        return new Promise((resolve, reject) => {
+          writer.on('finish', () => resolve(`/uploads/${telegramId}.jpg`));
+          writer.on('error', reject);
+        });
       } else {
         console.error('Ошибка при получении файла:', fileResponse.data);
         return '';
