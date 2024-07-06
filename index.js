@@ -7,6 +7,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
 const UserProgress = require('./models/userProgress');
 
@@ -101,7 +102,6 @@ async function getProfilePhotoUrl(telegramId) {
     return '';
   }
 }
-
 async function updateProfilePhoto(telegramId) {
   try {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
@@ -337,6 +337,31 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   }
 });
 
+bot.on('photo', async (msg) => {
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
+
+  const fileId = msg.photo[msg.photo.length - 1].file_id;
+  const filePath = await bot.getFileLink(fileId);
+
+  const response = await axios.get(filePath, { responseType: 'stream' });
+  const localFilePath = path.join(__dirname, 'uploads', `${userId}.jpg`);
+  const writer = fs.createWriteStream(localFilePath);
+
+  response.data.pipe(writer);
+
+  writer.on('finish', async () => {
+    const fileUrl = `/uploads/${userId}.jpg`;
+    await UserProgress.findOneAndUpdate(
+      { telegramId: userId.toString() },
+      { profilePhotoUrl: fileUrl }
+    );
+  });
+
+  writer.on('error', (error) => {
+    console.error('Ошибка при сохранении фото:', error.message);
+  });
+});
 
 bot.on('message', async (msg) => {
   const userId = msg.from.id;
