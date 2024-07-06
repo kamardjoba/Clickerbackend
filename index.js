@@ -69,7 +69,7 @@ async function getProfilePhotoUrl(telegramId) {
         const filePath = fileResponse.data.result.file_path;
         const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
 
-        // Скачиваем и сохраняем фото
+        // Скачивание и сохранение фото
         const photoResponse = await axios.get(fileUrl, { responseType: 'stream' });
         const localFilePath = path.join(__dirname, 'uploads', `${telegramId}.jpg`);
         const writer = fs.createWriteStream(localFilePath);
@@ -102,25 +102,28 @@ async function getProfilePhotoUrl(telegramId) {
     return '';
   }
 }
+
 async function updateProfilePhoto(telegramId) {
-  try {
-    const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
-    if (profilePhotoUrl) {
-      const updatedUser = await UserProgress.findOneAndUpdate(
+  async function updateProfilePhoto(telegramId) {
+    try {
+      const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
+      if (profilePhotoUrl) {
+        const updatedUser = await UserProgress.findOneAndUpdate(
           { telegramId },
           { profilePhotoUrl },
           { new: true }
-      );
-      if (!updatedUser) {
-        console.error('User not found for updating profile photo:', telegramId);
+        );
+        if (!updatedUser) {
+          console.error('Пользователь не найден для обновления фото профиля:', telegramId);
+        }
+      } else {
+        console.warn('URL фото профиля не возвращен для пользователя:', telegramId);
       }
-    } else {
-      console.warn('No profile photo URL returned for user:', telegramId);
+    } catch (error) {
+      console.error('Ошибка при обновлении фото профиля:', error.message);
     }
-  } catch (error) {
-    console.error('Error updating profile photo:', error.message);
   }
-}
+  
 
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
@@ -271,10 +274,10 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const referralCode = match[1];
 
-  console.log('Received /start command from user:', userId, 'in chat:', chatId);
+  console.log('Получена команда /start от пользователя:', userId, 'в чате:', chatId);
 
   if (!userId || !chatId) {
-    console.error('Error: userId or chatId is missing');
+    console.error('Ошибка: отсутствует userId или chatId');
     return;
   }
 
@@ -316,7 +319,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
       }
       await user.save();
     } else {
-      console.log('User already exists with telegramId:', userId);
+      console.log('Пользователь уже существует с telegramId:', userId);
     }
 
     const telegramLink = generateTelegramLink(user.referralCode);
@@ -331,7 +334,7 @@ bot.onText(/\/start (.+)/, async (msg, match) => {
     if (error.code === 11000) {
       return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
     } else {
-      console.error('Error in /start command:', error);
+      console.error('Ошибка в команде /start:', error);
       throw error;
     }
   }
