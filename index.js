@@ -5,6 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const s3 = require('./config/s3');
 require('dotenv').config();
 const UserProgress = require('./models/userProgress');
 
@@ -53,26 +54,31 @@ async function getProfilePhotoUrl(telegramId) {
 
       if (fileResponse.data.ok) {
         const filePath = fileResponse.data.result.file_path;
-        return `https://api.telegram.org/file/bot${token}/${filePath}`;
+        const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
+
+        const photoResponse = await axios({
+          url: fileUrl,
+          responseType: 'stream',
+        });
+
+        const uploadParams = {
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: `profile_photos/${telegramId}.jpg`,
+          Body: photoResponse.data,
+        };
+
+        const uploadResult = await s3.upload(uploadParams).promise();
+        return uploadResult.Location; // URL загруженного файла на S3
       } else {
         console.error('Ошибка при получении файла:', fileResponse.data);
         return '';
       }
     } else {
-      if (response.data.result && response.data.result.total_count === 0) {
-        console.error('Фото профиля не найдено для пользователя:', telegramId);
-        return ''; // Фото не доступны для этого пользователя
-      } else {
-        console.error('Ошибка ответа от API Telegram:', response.data);
-        return '';
-      }
+      console.error('Фото профиля не найдено для пользователя:', telegramId);
+      return '';
     }
   } catch (error) {
-    if (error.response) {
-      console.error(`Ошибка при получении фото профиля (статус: ${error.response.status})`, error.response.data);
-    } else {
-      console.error('Ошибка при получении фото профиля:', error.message);
-    }
+    console.error('Ошибка при получении фото профиля:', error.message);
     return '';
   }
 }
@@ -82,9 +88,9 @@ async function updateProfilePhoto(telegramId) {
     const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
     if (profilePhotoUrl) {
       const updatedUser = await UserProgress.findOneAndUpdate(
-          { telegramId },
-          { profilePhotoUrl },
-          { new: true }
+        { telegramId },
+        { profilePhotoUrl },
+        { new: true }
       );
       if (!updatedUser) {
         console.error('User not found for updating profile photo:', telegramId);
@@ -96,6 +102,7 @@ async function updateProfilePhoto(telegramId) {
     console.error('Error updating profile photo:', error.message);
   }
 }
+
 
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
@@ -384,49 +391,46 @@ bot.on("polling_error", (err) => console.log(err));
 
 
 bot.on('message', async (msg) => {
-  const userId = msg.from.id; // Используем ID пользователя
-  const chatId = msg.chat.id; // ID чата
+  const userId = msg.from.id;
+  const chatId = msg.chat.id;
 
-  // Проверка, чтобы не создавать пользователя с ID чата
-  if (userId === chatId.toString()) {
-    return bot.sendMessage(userId, `Невозможно создать пользователя с ID чата.`);
+  if (!userId || !chatId) {
+    console.error('Error: userId or chatId is missing');
+    return;
   }
 
   const firstName = msg.from.first_name || `user${userId}`;
-  let profilePhotoUrl = await getProfilePhotoUrl(userId);
+  const profilePhotoUrl = await getProfilePhotoUrl(userId);
 
-  let user = await UserProgress.findOne({ telegramId: userId.toString() });
+  try {
+    let user = await UserProgress.findOne({ telegramId: userId.toString() });
 
-  if (!user) {
-    user = new UserProgress({
-      telegramId: userId.toString(),
-      first_name: firstName,
-      profilePhotoUrl,
-      referralCode: generateReferralCode()
+    if (!user) {
+      user = new UserProgress({
+        telegramId: userId.toString(),
+        first_name: firstName,
+        profilePhotoUrl,
+        referralCode: generateReferralCode()
+      });
+      await user.save();
+    } else {
+      await updateProfilePhoto(userId);
+    }
+
+    const telegramLink = generateTelegramLink(user.referralCode);
+    await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+        ]
+      }
     });
-    try {
-          await user.save();
-        } catch (error) {
-          if (error.code === 11000) {
-            return bot.sendMessage(userId, `Пользователь с таким Telegram ID уже существует.`);
-          } else {
-            throw error; // Пробрасываем ошибку дальше, если это не ошибка дублирования
-          }
-        }
-  } else {
-    await updateProfilePhoto(userId);
+  } catch (error) {
+    console.error('Error in message handler:', error);
+    bot.sendMessage(userId, `Произошла ошибка при обработке вашего сообщения.`);
   }
-
-  const telegramLink = generateTelegramLink(user.referralCode);
-
-  // await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
-  //   reply_markup: {
-  //     inline_keyboard: [
-  //       [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-  //     ]
-  //   }
-  // });
 });
+
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
