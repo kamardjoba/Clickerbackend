@@ -22,9 +22,16 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.json());
 
+
 mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log(err));
+
+mongoose.connect(process.env.MONGODB_URL, {
+})
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.log(error));
+
 
 function generateReferralCode() {
   return Math.random().toString(36).substr(2, 9);
@@ -34,6 +41,10 @@ function generateTelegramLink(referralCode) {
   return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2b0f183 (initial)
 async function getProfilePhotoUrl(telegramId) {
   try {
     const response = await axios.get(`https://api.telegram.org/bot${process.env.TOKEN}/getUserProfilePhotos`, {
