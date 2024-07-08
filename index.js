@@ -8,6 +8,7 @@ const axios = require('axios');
 const s3 = require('./config/s3');
 require('dotenv').config();
 const UserProgress = require('./models/userProgress');
+const cardS3Url = 'https://bitclifprofilephoto.s3.eu-north-1.amazonaws.com/profile_photos/561009411.jpg'; // Замените на реальный URL карточки
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -22,16 +23,9 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.json());
 
-
 mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log(err));
-
-mongoose.connect(process.env.MONGODB_URL, {
-})
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.log(error));
-
 
 function generateReferralCode() {
   return Math.random().toString(36).substr(2, 9);
@@ -41,10 +35,6 @@ function generateTelegramLink(referralCode) {
   return `https://t.me/${BOT_USERNAME}?start=${referralCode}`;
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 2b0f183 (initial)
 async function getProfilePhotoUrl(telegramId) {
   try {
     const response = await axios.get(`https://api.telegram.org/bot${process.env.TOKEN}/getUserProfilePhotos`, {
@@ -90,7 +80,6 @@ async function updateProfilePhoto(telegramId) {
   }
 }
 
-
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
 
@@ -114,9 +103,10 @@ app.post('/check-subscription', async (req, res) => {
     if (isSubscribed) {
       if (!user.hasCheckedSubscription) {
         user.coins += 5000;
+        user.cardUrl = cardS3Url;
         user.hasCheckedSubscription = true;
         await user.save();
-        message = 'Вы успешно подписались на канал и получили 5000 монет!';
+        message = 'Вы успешно подписались на канал и получили 5000 монет и карточку!';
       } else {
         message = 'Вы уже проверяли подписку и получили свои монеты.';
       }
@@ -130,6 +120,7 @@ app.post('/check-subscription', async (req, res) => {
     res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
   }
 });
+
 
 app.post('/check-chat-subscription', async (req, res) => {
   const { userId } = req.body;
