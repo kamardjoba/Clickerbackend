@@ -108,19 +108,17 @@ app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
 
   try {
-    const userPromise = UserProgress.findById(userId);
-    const chatMemberResponsePromise = axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
-      params: {
-        chat_id: CHANNEL_ID,
-        user_id: userId
-      }
-    });
-
-    const [user, chatMemberResponse] = await Promise.all([userPromise, chatMemberResponsePromise]);
-
+    const user = await UserProgress.findById(userId);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
     }
+
+    const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
+      params: {
+        chat_id: CHANNEL_ID,
+        user_id: user.telegramId
+      }
+    });
 
     const status = chatMemberResponse.data.result.status;
     const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
@@ -145,7 +143,6 @@ app.post('/check-subscription', async (req, res) => {
     res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
   }
 });
-
 
 app.post('/check-chat-subscription', async (req, res) => {
   const { userId } = req.body;
