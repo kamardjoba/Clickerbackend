@@ -362,14 +362,14 @@ bot.on('message', async (msg) => {
       await updateProfilePhoto(userId);
     }
 
-    const telegramLink = generateTelegramLink(user.referralCode);
-    await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-        ]
-      }
-    });
+    // const telegramLink = generateTelegramLink(user.referralCode);
+    // await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+    //   reply_markup: {
+    //     inline_keyboard: [
+    //       [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+    //     ]
+    //   }
+    // });
   } catch (error) {
     console.error('Error in message handler:', error);
     bot.sendMessage(userId, `Произошла ошибка при обработке вашего сообщения.`);
@@ -418,13 +418,13 @@ bot.on('message', async (msg) => {
     }
 
     const telegramLink = generateTelegramLink(user.referralCode);
-    await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
-        ]
-      }
-    });
+    // await bot.sendMessage(userId, `Добро пожаловать! Нажмите на кнопку, чтобы начать игру. Ваш реферальный код: ${user.referralCode}. Пригласите друзей по ссылке: ${telegramLink}`, {
+    //   reply_markup: {
+    //     inline_keyboard: [
+    //       [{ text: 'Играть', web_app: { url: `${process.env.FRONTEND_URL}?userId=${user._id}` } }]
+    //     ]
+    //   }
+    // });
   } catch (error) {
     console.error('Error in message handler:', error);
     bot.sendMessage(userId, `Произошла ошибка при обработке вашего сообщения.`);
