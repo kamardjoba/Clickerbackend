@@ -15,14 +15,13 @@ const userProgressSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  upgradeCost: {
-    type: Number,
-    default: 10
+
+  hasClaimedRewards: {
+    type: Boolean,
+    default: false
   },
-  upgradeLevel: {
-    type: Number,
-    default: 1
-  },
+
+  
   coinPerClick: {
     type: Number,
     default: 1
@@ -31,10 +30,7 @@ const userProgressSchema = new mongoose.Schema({
     type: Number,
     default: 100
   },
-  upgradeLevelEnergy: {
-    type: Number,
-    default: 1
-  },
+  
   clickLimit: {
     type: Number,
     default: 1000
@@ -43,10 +39,7 @@ const userProgressSchema = new mongoose.Schema({
     type: Number,
     default: 1000
   },
-  upgradeCostEnergyTime: {
-    type: Number,
-    default: 200
-  },
+  
   valEnergyTime: {
     type: Number,
     default: 0.5

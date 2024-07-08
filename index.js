@@ -163,6 +163,30 @@ app.post('/check-chat-subscription', async (req, res) => {
 });
 
 
+app.post('/claim-rewards', async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    const user = await UserProgress.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
+    }
+
+    if (user.hasCheckedSubscription && !user.hasClaimedRewards) {
+      user.coins += 5000;  // или другая логика награды
+      user.hasClaimedRewards = true;
+      await user.save();
+      return res.json({ success: true, message: 'Награды успешно получены.' });
+    } else {
+      return res.json({ success: false, message: 'Награды уже были получены или подписка не подтверждена.' });
+    }
+  } catch (error) {
+    console.error('Ошибка при получении наград:', error);
+    return res.status(500).json({ success: false, message: 'Ошибка при получении наград.' });
+  }
+});
+
+
 app.post('/save-progress', async (req, res) => {
   const { userId, coins, upgradeCost, upgradeLevel, coinPerClick, upgradeCostEnergy, upgradeLevelEnergy, clickLimit, energyNow, upgradeCostEnergyTime, valEnergyTime, time } = req.body;
 
