@@ -8,6 +8,8 @@ const axios = require('axios');
 const s3 = require('./config/s3');
 require('dotenv').config();
 const UserProgress = require('./models/userProgress');
+const redis = require('redis');
+const redisClient = redis.createClient();
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -26,6 +28,10 @@ app.use(express.json());
 mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log(err));
+
+redisClient.on('error', (err) => {
+   console.error('Redis error:', err);
+   });
 
 function generateReferralCode() {
   return Math.random().toString(36).substr(2, 9);
@@ -108,17 +114,19 @@ app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
 
   try {
-    const user = await UserProgress.findById(userId);
+    const userPromise = UserProgress.findById(userId);
+    const chatMemberResponsePromise = axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
+      params: {
+        chat_id: CHANNEL_ID,
+        user_id: userId
+      }
+    });
+
+    const [user, chatMemberResponse] = await Promise.all([userPromise, chatMemberResponsePromise]);
+
     if (!user) {
       return res.status(404).json({ success: false, message: 'Пользователь не найден.' });
     }
-
-    const chatMemberResponse = await axios.get(`https://api.telegram.org/bot${token}/getChatMember`, {
-      params: {
-        chat_id: CHANNEL_ID,
-        user_id: user.telegramId
-      }
-    });
 
     const status = chatMemberResponse.data.result.status;
     const isSubscribed = ['member', 'administrator', 'creator'].includes(status);
@@ -143,6 +151,7 @@ app.post('/check-subscription', async (req, res) => {
     res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
   }
 });
+
 
 app.post('/check-chat-subscription', async (req, res) => {
   const { userId } = req.body;
@@ -216,37 +225,46 @@ app.post('/save-progress', async (req, res) => {
 app.get('/load-progress', async (req, res) => {
   const userId = req.query.userId;
 
-  try {
-    const user = await UserProgress.findById(userId);
-    if (user) {
-      await updateProfilePhoto(user.telegramId);
-      res.json({
-        success: true,
-        coins: user.coins,
-        upgradeCost: user.upgradeCost,
-        upgradeLevel: user.upgradeLevel,
-        coinPerClick: user.coinPerClick,
-        upgradeCostEnergy: user.upgradeCostEnergy,
-        upgradeLevelEnergy: user.upgradeLevelEnergy,
-        clickLimit: user.clickLimit,
-        energyNow: user.energyNow,
-        upgradeCostEnergyTime: user.upgradeCostEnergyTime,
-        valEnergyTime: user.valEnergyTime,
-        time: user.time,
-        first_name: user.first_name,
-        profilePhotoUrl: user.profilePhotoUrl,
-        referralCode: user.referralCode,
-        telegramLink: generateTelegramLink(user.referralCode),
-        referrals: user.referrals
-      });
-    } else {
-      res.status(404).json({ error: 'Progress not found' });
+  redisClient.get(`user:${userId}`, async (err, cachedData) => {
+    if (err) {
+      console.error('Redis get error:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
     }
-  } catch (error) {
-    console.error('Error loading progress:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
+
+    if (cachedData) {
+      return res.json(JSON.parse(cachedData));
+    } else {
+      try {
+        const user = await UserProgress.findById(userId);
+        if (user) {
+          await updateProfilePhoto(user.telegramId);
+          const userData = {
+            success: true,
+            coins: user.coins,
+            coinPerClick: user.coinPerClick,
+            clickLimit: user.clickLimit,
+            energyNow: user.energyNow,
+            valEnergyTime: user.valEnergyTime,
+            time: user.time,
+            first_name: user.first_name,
+            profilePhotoUrl: user.profilePhotoUrl,
+            referralCode: user.referralCode,
+            telegramLink: generateTelegramLink(user.referralCode),
+            referrals: user.referrals
+          };
+          redisClient.setex(`user:${userId}`, 3600, JSON.stringify(userData)); // Кэширование на 1 час
+          res.json(userData);
+        } else {
+          res.status(404).json({ error: 'Progress not found' });
+        }
+      } catch (error) {
+        console.error('Error loading progress:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    }
+  });
 });
+
 
 bot.onText(/\/start (.+)/, async (msg, match) => {
   const userId = msg.from.id;
@@ -429,6 +447,11 @@ bot.on('message', async (msg) => {
     console.error('Error in message handler:', error);
     bot.sendMessage(userId, `Произошла ошибка при обработке вашего сообщения.`);
   }
+});
+
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url} - ${new Date().toISOString()}`);
+  next();
 });
 
 
