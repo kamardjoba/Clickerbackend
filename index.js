@@ -36,29 +36,20 @@ function generateTelegramLink(referralCode) {
 
 async function getProfilePhotoUrl(telegramId) {
   try {
-    const response = await axios.get(`https://api.telegram.org/bot${token}/getUserProfilePhotos`, {
-      params: {
-        user_id: telegramId,
-        limit: 1
-      }
+    const response = await axios.get(`https://api.telegram.org/bot${process.env.TOKEN}/getUserProfilePhotos`, {
+      params: { user_id: telegramId, limit: 1 }
     });
 
     if (response.data.ok && response.data.result.photos.length > 0) {
       const fileId = response.data.result.photos[0][0].file_id;
-      const fileResponse = await axios.get(`https://api.telegram.org/bot${token}/getFile`, {
-        params: {
-          file_id: fileId
-        }
+      const fileResponse = await axios.get(`https://api.telegram.org/bot${process.env.TOKEN}/getFile`, {
+        params: { file_id: fileId }
       });
 
       if (fileResponse.data.ok) {
         const filePath = fileResponse.data.result.file_path;
-        const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`;
-
-        const photoResponse = await axios({
-          url: fileUrl,
-          responseType: 'stream',
-        });
+        const fileUrl = `https://api.telegram.org/file/bot${process.env.TOKEN}/${filePath}`;
+        const photoResponse = await axios({ url: fileUrl, responseType: 'stream' });
 
         const uploadParams = {
           Bucket: process.env.S3_BUCKET_NAME,
@@ -67,15 +58,10 @@ async function getProfilePhotoUrl(telegramId) {
         };
 
         const uploadResult = await s3.upload(uploadParams).promise();
-        return uploadResult.Location; // URL загруженного файла на S3
-      } else {
-        console.error('Ошибка при получении файла:', fileResponse.data);
-        return '';
+        return uploadResult.Location;
       }
-    } else {
-      console.error('Фото профиля не найдено для пользователя:', telegramId);
-      return '';
     }
+    return '';
   } catch (error) {
     console.error('Ошибка при получении фото профиля:', error.message);
     return '';
@@ -83,22 +69,13 @@ async function getProfilePhotoUrl(telegramId) {
 }
 
 async function updateProfilePhoto(telegramId) {
-  try {
-    const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
-    if (profilePhotoUrl) {
-      const updatedUser = await UserProgress.findOneAndUpdate(
-        { telegramId },
-        { profilePhotoUrl },
-        { new: true }
-      );
-      if (!updatedUser) {
-        console.error('User not found for updating profile photo:', telegramId);
-      }
-    } else {
-      console.warn('No profile photo URL returned for user:', telegramId);
-    }
-  } catch (error) {
-    console.error('Error updating profile photo:', error.message);
+  const profilePhotoUrl = await getProfilePhotoUrl(telegramId);
+  if (profilePhotoUrl) {
+    await UserProgress.findOneAndUpdate(
+      { telegramId },
+      { profilePhotoUrl },
+      { new: true }
+    );
   }
 }
 
