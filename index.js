@@ -212,11 +212,8 @@ app.post('/save-progress', async (req, res) => {
       user.upgradeCost = upgradeCost;
       user.upgradeLevel = upgradeLevel;
       user.coinPerClick = coinPerClick;
-      user.upgradeCostEnergy = upgradeCostEnergy;
-      user.upgradeLevelEnergy = upgradeLevelEnergy;
       user.clickLimit = clickLimit;
       user.energyNow = energyNow;
-      user.upgradeCostEnergyTime = upgradeCostEnergyTime;
       user.valEnergyTime = valEnergyTime;
       user.time = time;
       await user.save();
@@ -240,14 +237,9 @@ app.get('/load-progress', async (req, res) => {
       res.json({
         success: true,
         coins: user.coins,
-        upgradeCost: user.upgradeCost,
-        upgradeLevel: user.upgradeLevel,
         coinPerClick: user.coinPerClick,
-        upgradeCostEnergy: user.upgradeCostEnergy,
-        upgradeLevelEnergy: user.upgradeLevelEnergy,
         clickLimit: user.clickLimit,
         energyNow: user.energyNow,
-        upgradeCostEnergyTime: user.upgradeCostEnergyTime,
         valEnergyTime: user.valEnergyTime,
         time: user.time,
         first_name: user.first_name,
@@ -255,7 +247,7 @@ app.get('/load-progress', async (req, res) => {
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
         referrals: user.referrals,
-        cardS3Url: user.cardUrls
+        cardUrls: user.cardUrls
       });
     } else {
       res.status(404).json({ error: 'Progress not found' });
