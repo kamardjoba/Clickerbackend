@@ -80,6 +80,20 @@ async function updateProfilePhoto(telegramId) {
   }
 }
 
+const rewardUserWithCard = async (telegramId, cardUrl) => {
+  const user = await UserProgress.findOne({ telegramId });
+  if (user) {
+    user.cardUrls.push(cardUrl);
+    await user.save();
+  } else {
+    const newUser = new UserProgress({
+      telegramId,
+      cardUrls: [cardUrl]
+    });
+    await newUser.save();
+  }
+};
+
 app.post('/check-subscription', async (req, res) => {
   const { userId } = req.body;
 
@@ -103,7 +117,7 @@ app.post('/check-subscription', async (req, res) => {
     if (isSubscribed) {
       if (!user.hasCheckedSubscription) {
         user.coins += 5000;
-        user.cardUrl = cardS3Url;
+        await rewardUserWithCard(user.telegramId, cardS3Url); // Награждаем пользователя карточкой
         user.hasCheckedSubscription = true;
         await user.save();
         message = 'Вы успешно подписались на канал и получили 5000 монет и карточку!';
@@ -120,6 +134,7 @@ app.post('/check-subscription', async (req, res) => {
     res.status(500).json({ success: false, message: 'Ошибка при проверке подписки.' });
   }
 });
+
 
 
 app.post('/check-chat-subscription', async (req, res) => {
