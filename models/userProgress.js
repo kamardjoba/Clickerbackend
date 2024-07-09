@@ -73,9 +73,9 @@ const userProgressSchema = new mongoose.Schema({
        default: false
        },
 
-  cardUrl: {
-      type: String,
-      default: ''
+  cardUrls: {  // Изменено на массив строк
+       type: [String],
+       default: []
       },
   
   referrals: [{ // Добавляем массив рефералов
