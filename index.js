@@ -13,7 +13,7 @@ const cardS3Url = 'https://bitclifprofilephoto.s3.eu-north-1.amazonaws.com/profi
 const app = express();
 const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
-const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
+const BOT_USERNAME = "BItclif_clicker_bot";
 const CHANNEL_ID = -1002202574694;
 const CHAT_ID = -1002177922862;
 
@@ -252,7 +252,7 @@ app.get('/load-progress', async (req, res) => {
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
         referrals: user.referrals,
-        cardUrls: user.cardUrls // убедимся, что это поле отправляется клиенту
+        cardUrls: user.cardUrls // убедитесь, что это поле отправляется
       });
     } else {
       res.status(404).json({ error: 'Progress not found' });
