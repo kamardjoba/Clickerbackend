@@ -254,7 +254,8 @@ app.get('/load-progress', async (req, res) => {
         profilePhotoUrl: user.profilePhotoUrl,
         referralCode: user.referralCode,
         telegramLink: generateTelegramLink(user.referralCode),
-        referrals: user.referrals
+        referrals: user.referrals,
+        cardS3Url: user.cardUrls
       });
     } else {
       res.status(404).json({ error: 'Progress not found' });
