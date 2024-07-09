@@ -15,7 +15,7 @@ const port = process.env.PORT || 3001;
 const token = process.env.TOKEN;
 const BOT_USERNAME = "sdfsdfjsidjsjgjsdopgjd_bot";
 const CHANNEL_ID = -1002202574694;
-const CHAT_ID = -1002177922862; 
+const CHAT_ID = -1002177922862;
 
 const bot = new TelegramBot(token, { polling: true });
 

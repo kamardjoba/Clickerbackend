@@ -21,15 +21,12 @@ const userProgressSchema = new mongoose.Schema({
     default: false
   },
 
-  
+
   coinPerClick: {
     type: Number,
     default: 1
   },
-  upgradeCostEnergy: {
-    type: Number,
-    default: 100
-  },
+  
   
   clickLimit: {
     type: Number,
@@ -71,11 +68,16 @@ const userProgressSchema = new mongoose.Schema({
      default: false 
     },
 
-   hasCheckedChatSubscription: {
+  hasCheckedChatSubscription: {
        type: Boolean,
        default: false
        },
-     
+
+  cardUrl: {
+      type: String,
+      default: ''
+      },
+  
   referrals: [{ // Добавляем массив рефералов
       telegramId: String,
       first_name: String,
